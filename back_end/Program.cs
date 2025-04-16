@@ -19,8 +19,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -60,6 +58,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Usuarios Module
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 
 // Reservas Module
 builder.Services.AddScoped<IReservaService, ReservaService>();
