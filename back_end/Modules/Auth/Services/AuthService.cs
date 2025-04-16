@@ -9,6 +9,7 @@ using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
 using BCrypt.Net;
+using Microsoft.Extensions.Logging;
 
 namespace back_end.Modules.Auth.Services
 {
@@ -22,26 +23,43 @@ namespace back_end.Modules.Auth.Services
     {
         private readonly IUserRepository _userRepository;
         private readonly IConfiguration _configuration;
+        private readonly ILogger<AuthService> _logger;
 
-        public AuthService(IUserRepository userRepository, IConfiguration configuration)
+        public AuthService(IUserRepository userRepository, IConfiguration configuration, ILogger<AuthService> logger)
         {
             _userRepository = userRepository;
             _configuration = configuration;
+            _logger = logger;
         }
 
         public AuthResponseDTO Authenticate(AuthRequestDTO request)
         {
-            var user = _userRepository.GetUserByUsername(request.Username);
-            if (user == null || !VerifyPasswordHash(request.Password, user.ContrasenaHash))
+            // Buscar el usuario por correo electrónico
+            var user = _userRepository.GetUserByEmail(request.Email);
+            
+            // Si el usuario no existe, lanzar excepción específica para el correo
+            if (user == null)
             {
-                throw new UnauthorizedAccessException("Usuario o contraseña inválidos");
+                _logger.LogWarning("Intento de login fallido: Usuario no encontrado: {Email}", request.Email);
+                throw new UnauthorizedAccessException("El correo electrónico no está registrado en el sistema");
+            }
+            
+            // Si el usuario existe pero la contraseña no coincide
+            if (!VerifyPasswordHash(request.Password, user.ContrasenaHash))
+            {
+                _logger.LogWarning("Intento de login fallido: Contraseña incorrecta para: {Email}", request.Email);
+                throw new UnauthorizedAccessException("La contraseña ingresada es incorrecta");
             }
 
+            // Si llegamos aquí, la autenticación fue exitosa
             var token = GenerateJwtToken(user);
+            
+            // Registramos el éxito
+            _logger.LogInformation("Login exitoso para: {Email}", request.Email);
 
             return new AuthResponseDTO
             {
-                Username = user.Correo,
+                Email = user.Correo,
                 Token = token,
                 UserId = user.Id,
                 Nombre = user.Nombre,
@@ -54,11 +72,13 @@ namespace back_end.Modules.Auth.Services
             // Verificar si el usuario ya existe
             if (await _userRepository.ExistsByEmail(request.Email))
             {
+                _logger.LogWarning("Intento de registro fallido: Email ya existe: {Email}", request.Email);
                 throw new InvalidOperationException("El correo electrónico ya está registrado");
             }
 
             // Registrar al usuario
             var newUser = await _userRepository.RegisterUser(request);
+            _logger.LogInformation("Usuario registrado correctamente: {Email}", request.Email);
 
             // Retornar la respuesta
             return new RegisterResponseDTO
@@ -72,11 +92,16 @@ namespace back_end.Modules.Auth.Services
         {
             try
             {
+                _logger.LogDebug("Verificando contraseña para hash: {HashPrefix}...", 
+                    storedHash.Length > 10 ? storedHash.Substring(0, 10) + "..." : storedHash);
+                
                 // Primero intentamos verificar con BCrypt
                 if (storedHash.StartsWith("$2a$") || storedHash.StartsWith("$2b$") || storedHash.StartsWith("$2y$"))
                 {
                     // Es un hash BCrypt
-                    return BCrypt.Net.BCrypt.Verify(password, storedHash);
+                    bool result = BCrypt.Net.BCrypt.Verify(password, storedHash);
+                    _logger.LogDebug("Verificación BCrypt: {Result}", result ? "Exitosa" : "Fallida");
+                    return result;
                 }
                 
                 // Método de transición - si el hash está en Base64 (hash antiguo)
@@ -84,16 +109,22 @@ namespace back_end.Modules.Auth.Services
                 {
                     byte[] hashBytes = Convert.FromBase64String(storedHash);
                     string decodedHash = Encoding.UTF8.GetString(hashBytes);
-                    return password == decodedHash;
+                    bool result = password == decodedHash;
+                    _logger.LogDebug("Verificación Base64: {Result}", result ? "Exitosa" : "Fallida");
+                    return result;
                 }
-                catch
+                catch (Exception ex)
                 {
+                    _logger.LogDebug("Error en decodificación Base64: {Message}", ex.Message);
                     // Si no es un hash Base64 ni BCrypt, es probablemente texto plano (solo para desarrollo)
-                    return password == storedHash;
+                    bool result = password == storedHash;
+                    _logger.LogDebug("Verificación texto plano: {Result}", result ? "Exitosa" : "Fallida");
+                    return result;
                 }
             }
-            catch (Exception)
+            catch (Exception ex)
             {
+                _logger.LogError(ex, "Error inesperado en verificación de contraseña");
                 return false;
             }
         }
@@ -119,6 +150,7 @@ namespace back_end.Modules.Auth.Services
                 signingCredentials: credentials
             );
             
+            _logger.LogDebug("Token JWT generado para usuario: {UserId}", user.Id);
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }

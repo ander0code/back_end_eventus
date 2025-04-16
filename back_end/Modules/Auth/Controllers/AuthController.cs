@@ -25,13 +25,13 @@ namespace back_end.Modules.Auth.Controllers
         {
             try
             {
-                _logger.LogInformation("Intento de login para usuario: {Username}", request.Username);
+                _logger.LogInformation("Intento de login para usuario: {Email}", request.Email);
                 var response = _authService.Authenticate(request);
                 return Ok(response);
             }
             catch (UnauthorizedAccessException ex)
             {
-                _logger.LogWarning(ex, "Autenticación fallida para usuario: {Username}", request.Username);
+                _logger.LogWarning(ex, "Autenticación fallida para usuario: {Email}", request.Email);
                 return Unauthorized(new ErrorResponseDTO { Message = ex.Message, StatusCode = 401 });
             }
         }

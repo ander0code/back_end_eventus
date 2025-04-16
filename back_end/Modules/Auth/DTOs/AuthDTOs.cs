@@ -3,13 +3,13 @@ namespace back_end.Modules.Auth.DTOs
     // DTOs para login
     public class AuthRequestDTO
     {
-        public required string Username { get; set; }
+        public required string Email { get; set; }
         public required string Password { get; set; }
     }
 
     public class AuthResponseDTO
     {
-        public required string Username { get; set; }
+        public required string Email { get; set; }
         public required string Token { get; set; }
         public int UserId { get; set; }
         public string Nombre { get; set; } = string.Empty;

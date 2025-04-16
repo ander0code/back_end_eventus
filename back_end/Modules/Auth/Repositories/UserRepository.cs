@@ -12,7 +12,7 @@ namespace back_end.Modules.Auth.Repositories
 {
     public interface IUserRepository
     {
-        UsuarioAuthDTO? GetUserByUsername(string username);
+        UsuarioAuthDTO? GetUserByEmail(string email);
         Task<UsuarioAuthDTO> RegisterUser(RegisterRequestDTO request);
         Task<bool> ExistsByEmail(string email);
     }
@@ -26,10 +26,10 @@ namespace back_end.Modules.Auth.Repositories
             _context = context;
         }
 
-        public UsuarioAuthDTO? GetUserByUsername(string username)
+        public UsuarioAuthDTO? GetUserByEmail(string email)
         {
             // Adaptamos la lógica para usar la entidad Usuario de nuestro modelo
-            var usuario = _context.Usuarios.FirstOrDefault(u => u.Correo == username);
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.Correo == email);
             
             if (usuario == null)
                 return null;
