@@ -6,7 +6,9 @@ using back_end.Modules.inventario.services;
 using back_end.Modules.reservas.services;
 using back_end.Modules.servicios.services;
 using back_end.Modules.usuarios.services;
+using back_end.Modules.usuarios.Repositories;
 using Microsoft.EntityFrameworkCore;
+
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -14,6 +16,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 
 // Add CORS
 builder.Services.AddCors(options =>
