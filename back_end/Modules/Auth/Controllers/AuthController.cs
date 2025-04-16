@@ -1,7 +1,6 @@
 using back_end.Modules.Auth.DTOs;
 using back_end.Modules.Auth.Services;
 using Microsoft.AspNetCore.Mvc;
-using back_end.Core.Helpers;
 
 namespace back_end.Modules.Auth.Controllers
 {

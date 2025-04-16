@@ -1,4 +1,3 @@
-using System;
 
 namespace back_end.Modules.Auth.DTOs
 {

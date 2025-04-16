@@ -1,4 +1,5 @@
 using back_end.Core.Data;
+using back_end.Core.Configurations;
 using back_end.Middleware;
 using back_end.Modules.Auth.Repositories;
 using back_end.Modules.Auth.Services;
@@ -8,19 +9,18 @@ using back_end.Modules.servicios.services;
 using back_end.Modules.usuarios.services;
 using back_end.Modules.usuarios.Repositories;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
-using System.Text;
-
 
 var builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
-builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
-builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+
+// Configurar Swagger utilizando la clase de configuración
+builder.Services.AddSwaggerConfiguration();
+
+// Configurar Logging
+builder.Services.AddLoggingConfiguration();
 
 // Add CORS
 builder.Services.AddCors(options =>
@@ -36,22 +36,8 @@ builder.Services.AddCors(options =>
 builder.Services.AddDbContext<DbEventusContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// Add JWT Authentication
-builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
-    .AddJwtBearer(options =>
-    {
-        options.TokenValidationParameters = new TokenValidationParameters
-        {
-            ValidateIssuer = true,
-            ValidateAudience = true,
-            ValidateLifetime = true,
-            ValidateIssuerSigningKey = true,
-            ValidIssuer = builder.Configuration["Jwt:Issuer"],
-            ValidAudience = builder.Configuration["Jwt:Audience"],
-            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(
-                builder.Configuration["Jwt:Key"] ?? "tu_clave_secreta_predeterminada_debe_ser_al_menos_16_caracteres"))
-        };
-    });
+// Agregar configuración JWT
+builder.Services.AddJwtConfiguration(builder.Configuration);
 
 // Register services for each module
 // Auth Module
@@ -60,6 +46,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 
 // Usuarios Module
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
+builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 
 // Reservas Module
 builder.Services.AddScoped<IReservaService, ReservaService>();
@@ -75,8 +62,7 @@ var app = builder.Build();
 // Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
-    app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerConfiguration();
 }
 else
 {
@@ -96,26 +82,5 @@ app.UseAuthorization();
 
 // Map controller routes with patterns for each module
 app.MapControllers(); // Default route for all controllers
-
-// Map specific routes for modules
-app.MapControllerRoute(
-    name: "auth",
-    pattern: "api/auth/{controller=Auth}/{action=Index}/{id?}");
-
-app.MapControllerRoute(
-    name: "usuarios",
-    pattern: "api/usuarios/{controller=Usuarios}/{action=Index}/{id?}");
-
-app.MapControllerRoute(
-    name: "reservas",
-    pattern: "api/reservas/{controller=Reservas}/{action=Index}/{id?}");
-
-app.MapControllerRoute(
-    name: "servicios",
-    pattern: "api/servicios/{controller=Servicios}/{action=Index}/{id?}");
-
-app.MapControllerRoute(
-    name: "inventario",
-    pattern: "api/inventario/{controller=Inventario}/{action=Index}/{id?}");
 
 app.Run();

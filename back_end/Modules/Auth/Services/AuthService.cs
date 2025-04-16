@@ -1,15 +1,10 @@
 using back_end.Modules.Auth.Repositories;
 using back_end.Modules.Auth.DTOs;
-using System;
-using System.Linq;
-using System.Security.Cryptography;
 using System.Text;
-using System.Threading.Tasks;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
-using BCrypt.Net;
-using Microsoft.Extensions.Logging;
+
 
 namespace back_end.Modules.Auth.Services
 {
@@ -79,12 +74,19 @@ namespace back_end.Modules.Auth.Services
             // Registrar al usuario
             var newUser = await _userRepository.RegisterUser(request);
             _logger.LogInformation("Usuario registrado correctamente: {Email}", request.Email);
+            
+            // Generar token para el usuario recién registrado
+            var token = GenerateJwtToken(newUser);
+            _logger.LogInformation("Token generado para usuario nuevo: {Email}", request.Email);
 
-            // Retornar la respuesta
+            // Retornar la respuesta con el token
             return new RegisterResponseDTO
             {
                 UserId = newUser.Id,
-                Email = newUser.Correo
+                Email = newUser.Correo,
+                Token = token,
+                Nombre = newUser.Nombre,
+                Apellido = newUser.Apellido
             };
         }
 
@@ -131,7 +133,7 @@ namespace back_end.Modules.Auth.Services
 
         private string GenerateJwtToken(UsuarioAuthDTO user)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? "tu_clave_secreta_predeterminada_debe_ser_al_menos_16_caracteres"));
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? "tu_clave_super_secreta_que_debe_ser_larga_y_compleja_123456789"));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
             
             var claims = new[]
