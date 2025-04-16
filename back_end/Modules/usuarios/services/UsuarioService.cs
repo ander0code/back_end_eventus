@@ -1,72 +1,62 @@
-using back_end.Core.Data;
+using back_end.Modules.usuarios.DTOs;
 using back_end.Modules.usuarios.Models;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using back_end.Modules.usuarios.Repositories;
 
 namespace back_end.Modules.usuarios.services
 {
     public interface IUsuarioService
     {
-        Task<List<Usuario>> GetAllAsync();
-        Task<Usuario?> GetByIdAsync(int id);
-        Task<Usuario?> GetByEmailAsync(string email);
-        Task<Usuario> CreateAsync(Usuario usuario);
-        Task<Usuario> UpdateAsync(Usuario usuario);
-        Task<bool> DeleteAsync(int id);
+        Task<List<UsuarioResponseDTO>> GetAllAsync();
+        Task<UsuarioResponseDTO?> GetByIdAsync(int id);
+        Task<UsuarioResponseDTO?> UpdateAsync(int id, UsuarioUpdateDTO dto);
     }
 
     public class UsuarioService : IUsuarioService
     {
-        private readonly DbEventusContext _context;
+        private readonly IUsuarioRepository _repository;
 
-        public UsuarioService(DbEventusContext context)
+        public UsuarioService(IUsuarioRepository repository)
         {
-            _context = context;
+            _repository = repository;
         }
 
-        public async Task<List<Usuario>> GetAllAsync()
+        public async Task<List<UsuarioResponseDTO>> GetAllAsync()
         {
-            return await _context.Usuarios.ToListAsync();
+            var usuarios = await _repository.GetAllAsync();
+            return usuarios.Select(u => MapToDTO(u)).ToList();
         }
 
-        public async Task<Usuario?> GetByIdAsync(int id)
+        public async Task<UsuarioResponseDTO?> GetByIdAsync(int id)
         {
-            return await _context.Usuarios
-                .FirstOrDefaultAsync(u => u.Id == id);
+            var usuario = await _repository.GetByIdAsync(id);
+            return usuario == null ? null : MapToDTO(usuario);
         }
 
-        public async Task<Usuario?> GetByEmailAsync(string email)
+        public async Task<UsuarioResponseDTO?> UpdateAsync(int id, UsuarioUpdateDTO dto)
         {
-            return await _context.Usuarios
-                .FirstOrDefaultAsync(u => u.Correo == email);
-        }
-
-        public async Task<Usuario> CreateAsync(Usuario usuario)
-        {
-            _context.Usuarios.Add(usuario);
-            await _context.SaveChangesAsync();
-            return usuario;
-        }
-
-        public async Task<Usuario> UpdateAsync(Usuario usuario)
-        {
-            _context.Entry(usuario).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-            return usuario;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var usuario = await _context.Usuarios.FindAsync(id);
+            var usuario = await _repository.GetByIdAsync(id);
             if (usuario == null)
-                return false;
+                return null;
 
-            _context.Usuarios.Remove(usuario);
-            await _context.SaveChangesAsync();
-            return true;
+            // Actualizar campos permitidos
+            usuario.Nombre = dto.Nombre ?? usuario.Nombre;
+            usuario.Apellido = dto.Apellido ?? usuario.Apellido;
+            usuario.Telefono = dto.Telefono ?? usuario.Telefono;
+            usuario.Verificado = dto.Verificado ?? usuario.Verificado;
+
+            var actualizado = await _repository.UpdateAsync(usuario);
+            return MapToDTO(actualizado);
         }
+
+        private UsuarioResponseDTO MapToDTO(Usuario u) => new UsuarioResponseDTO
+        {
+            Id = u.Id,
+            Nombre = u.Nombre,
+            Apellido = u.Apellido,
+            Correo = u.Correo,
+            Telefono = u.Telefono,
+            Verificado = u.Verificado,
+            FechaRegistro = u.FechaRegistro
+        };
     }
 }
