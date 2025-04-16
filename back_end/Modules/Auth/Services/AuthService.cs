@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
+using BCrypt.Net;
 
 namespace back_end.Modules.Auth.Services
 {
@@ -69,12 +70,31 @@ namespace back_end.Modules.Auth.Services
 
         private bool VerifyPasswordHash(string password, string storedHash)
         {
-            // Nota: Este es un ejemplo simplificado. En una app real, necesitarías implementar
-            // una verificación de contraseña más segura, posiblemente usando BCrypt o similar
-            using (var hmac = new HMACSHA512())
+            try
             {
-                var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-                return computedHash.SequenceEqual(Convert.FromBase64String(storedHash));
+                // Primero intentamos verificar con BCrypt
+                if (storedHash.StartsWith("$2a$") || storedHash.StartsWith("$2b$") || storedHash.StartsWith("$2y$"))
+                {
+                    // Es un hash BCrypt
+                    return BCrypt.Net.BCrypt.Verify(password, storedHash);
+                }
+                
+                // Método de transición - si el hash está en Base64 (hash antiguo)
+                try
+                {
+                    byte[] hashBytes = Convert.FromBase64String(storedHash);
+                    string decodedHash = Encoding.UTF8.GetString(hashBytes);
+                    return password == decodedHash;
+                }
+                catch
+                {
+                    // Si no es un hash Base64 ni BCrypt, es probablemente texto plano (solo para desarrollo)
+                    return password == storedHash;
+                }
+            }
+            catch (Exception)
+            {
+                return false;
             }
         }
 

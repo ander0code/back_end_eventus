@@ -84,12 +84,9 @@ namespace back_end.Modules.Auth.Repositories
 
         private string HashPassword(string password)
         {
-            // En una app real, usarías BCrypt o similar
-            using (var hmac = new HMACSHA512())
-            {
-                var computedHash = hmac.ComputeHash(Encoding.UTF8.GetBytes(password));
-                return Convert.ToBase64String(computedHash);
-            }
+            // Usar BCrypt para generar un hash seguro
+            // WorkFactor 12 es un buen equilibrio entre seguridad y rendimiento
+            return BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
         }
 
         private string GenerateVerificationToken()
