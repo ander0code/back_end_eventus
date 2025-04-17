@@ -14,17 +14,23 @@ using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container
+builder.Configuration
+    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
+    .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
+    .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true) 
+    .AddEnvironmentVariables() 
+    .AddUserSecrets<Program>(optional: true); 
+
+
+builder.Services.AddAppSettings();
+
 builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
-// Configurar Swagger utilizando la clase de configuración
 builder.Services.AddSwaggerConfiguration();
 
-// Configurar Logging
 builder.Services.AddLoggingConfiguration();
 
-// Add CORS
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowSpecificOrigin",
@@ -34,11 +40,13 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader());
 });
 
-// Add DbContext configuration
-builder.Services.AddDbContext<DbEventusContext>(options =>
-    options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+// Add DbContext configuration usando AppSettings
+builder.Services.AddDbContext<DbEventusContext>((serviceProvider, options) => {
+    var appSettings = serviceProvider.GetRequiredService<AppSettings>();
+    options.UseSqlServer(appSettings.DatabaseConnection);
+});
 
-// Agregar configuración JWT
+// Agregar configuración JWT usando AppSettings
 builder.Services.AddJwtConfiguration(builder.Configuration);
 
 // Register services for each module
@@ -63,28 +71,22 @@ builder.Services.AddScoped<IInventarioService, InventarioService>();
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline
 if (app.Environment.IsDevelopment())
 {
     app.UseSwaggerConfiguration();
 }
 else
 {
-    // Solo aplica HTTPS Redirection en producción
     app.UseHttpsRedirection();
 }
 
-// Use CORS middleware
 app.UseCors("AllowSpecificOrigin");
 
-// Use custom middleware
 app.UseExampleMiddleware();
 
-// Authentication & Authorization middleware
 app.UseAuthentication();
 app.UseAuthorization();
 
-// Map controller routes with patterns for each module
-app.MapControllers(); // Default route for all controllers
+app.MapControllers();
 
 app.Run();

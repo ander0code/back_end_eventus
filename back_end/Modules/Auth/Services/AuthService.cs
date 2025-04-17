@@ -1,10 +1,10 @@
+using back_end.Core.Configurations;
 using back_end.Modules.Auth.Repositories;
 using back_end.Modules.Auth.DTOs;
 using System.Text;
 using System.Security.Claims;
 using System.IdentityModel.Tokens.Jwt;
 using Microsoft.IdentityModel.Tokens;
-
 
 namespace back_end.Modules.Auth.Services
 {
@@ -17,13 +17,13 @@ namespace back_end.Modules.Auth.Services
     public class AuthService : IAuthService
     {
         private readonly IUserRepository _userRepository;
-        private readonly IConfiguration _configuration;
+        private readonly AppSettings _appSettings;
         private readonly ILogger<AuthService> _logger;
 
-        public AuthService(IUserRepository userRepository, IConfiguration configuration, ILogger<AuthService> logger)
+        public AuthService(IUserRepository userRepository, AppSettings appSettings, ILogger<AuthService> logger)
         {
             _userRepository = userRepository;
-            _configuration = configuration;
+            _appSettings = appSettings;
             _logger = logger;
         }
 
@@ -133,7 +133,8 @@ namespace back_end.Modules.Auth.Services
 
         private string GenerateJwtToken(UsuarioAuthDTO user)
         {
-            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? "tu_clave_super_secreta_que_debe_ser_larga_y_compleja_123456789"));
+            // Usando la clase AppSettings para acceder a las configuraciones
+            var securityKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(_appSettings.JwtKey));
             var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha256);
             
             var claims = new[]
@@ -145,8 +146,8 @@ namespace back_end.Modules.Auth.Services
             };
             
             var token = new JwtSecurityToken(
-                issuer: _configuration["Jwt:Issuer"],
-                audience: _configuration["Jwt:Audience"],
+                issuer: _appSettings.JwtIssuer,
+                audience: _appSettings.JwtAudience,
                 claims: claims,
                 expires: DateTime.Now.AddDays(7),
                 signingCredentials: credentials

@@ -16,7 +16,11 @@
       "launchUrl": "swagger",
       "applicationUrl": "http://localhost:5280",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ConnectionStrings__DefaultConnection": "Server=DESKTOP-IP8JBPV;Database=db_eventus;Trusted_Connection=True;TrustServerCertificate=True;Connect Timeout=60;",
+        "Jwt__Key": "tu_clave_super_secreta_que_debe_ser_larga_y_compleja_123456789",
+        "Jwt__Issuer": "https://localhost:7041",
+        "Jwt__Audience": "EventusAPI"
       }
     },
     "https": {
@@ -26,7 +30,11 @@
       "launchUrl": "swagger",
       "applicationUrl": "https://localhost:7041;http://localhost:5280",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ConnectionStrings__DefaultConnection": "Server=DESKTOP-IP8JBPV;Database=db_eventus;Trusted_Connection=True;TrustServerCertificate=True;Connect Timeout=60;",
+        "Jwt__Key": "tu_clave_super_secreta_que_debe_ser_larga_y_compleja_123456789",
+        "Jwt__Issuer": "https://localhost:7041",
+        "Jwt__Audience": "EventusAPI"
       }
     },
     "IIS Express": {
@@ -34,7 +42,11 @@
       "launchBrowser": true,
       "launchUrl": "swagger",
       "environmentVariables": {
-        "ASPNETCORE_ENVIRONMENT": "Development"
+        "ASPNETCORE_ENVIRONMENT": "Development",
+        "ConnectionStrings__DefaultConnection": "Server=DESKTOP-IP8JBPV;Database=db_eventus;Trusted_Connection=True;TrustServerCertificate=True;Connect Timeout=60;",
+        "Jwt__Key": "tu_clave_super_secreta_que_debe_ser_larga_y_compleja_123456789",
+        "Jwt__Issuer": "https://localhost:7041",
+        "Jwt__Audience": "EventusAPI"
       }
     }
   }

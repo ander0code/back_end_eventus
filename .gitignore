@@ -25,6 +25,13 @@ obj/
 appsettings.Development.json
 appsettings.Production.json
 appsettings.Staging.json
+appsettings.Local.json
+# Excluir appsettings con posibles credenciales
+**/bin/**/appsettings*.json
+**/obj/**/appsettings*.json
+secrets.json
+*.pfx
+*.key
 
 # Entity Framework
 *.edmx.diagram
