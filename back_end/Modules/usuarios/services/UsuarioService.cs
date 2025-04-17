@@ -6,9 +6,8 @@ namespace back_end.Modules.usuarios.services
 {
     public interface IUsuarioService
     {
-        Task<List<UsuarioResponseDTO>> GetAllAsync();
-        Task<UsuarioResponseDTO?> GetByIdAsync(int id);
-        Task<UsuarioResponseDTO?> UpdateAsync(int id, UsuarioUpdateDTO dto);
+        Task<UsuarioResponseDTO?> GetByCorreoAsync(string correo);
+        Task<UsuarioResponseDTO?> UpdateByCorreoAsync(string correo, UsuarioUpdateDTO dto);
     }
 
     public class UsuarioService : IUsuarioService
@@ -20,25 +19,18 @@ namespace back_end.Modules.usuarios.services
             _repository = repository;
         }
 
-        public async Task<List<UsuarioResponseDTO>> GetAllAsync()
+        public async Task<UsuarioResponseDTO?> GetByCorreoAsync(string correo)
         {
-            var usuarios = await _repository.GetAllAsync();
-            return usuarios.Select(u => MapToDTO(u)).ToList();
-        }
-
-        public async Task<UsuarioResponseDTO?> GetByIdAsync(int id)
-        {
-            var usuario = await _repository.GetByIdAsync(id);
+            var usuario = await _repository.GetByCorreoAsync(correo);
             return usuario == null ? null : MapToDTO(usuario);
         }
 
-        public async Task<UsuarioResponseDTO?> UpdateAsync(int id, UsuarioUpdateDTO dto)
+        public async Task<UsuarioResponseDTO?> UpdateByCorreoAsync(string correo, UsuarioUpdateDTO dto)
         {
-            var usuario = await _repository.GetByIdAsync(id);
+            var usuario = await _repository.GetByCorreoAsync(correo);
             if (usuario == null)
                 return null;
 
-            // Actualizar campos permitidos
             usuario.Nombre = dto.Nombre ?? usuario.Nombre;
             usuario.Apellido = dto.Apellido ?? usuario.Apellido;
             usuario.Telefono = dto.Telefono ?? usuario.Telefono;
@@ -60,3 +52,4 @@ namespace back_end.Modules.usuarios.services
         };
     }
 }
+

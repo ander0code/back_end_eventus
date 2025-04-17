@@ -19,33 +19,16 @@ namespace back_end.Modules.usuarios.Controllers
         }
 
         [Authorize]
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
+        [HttpGet("{correo}")]
+        public async Task<IActionResult> GetByCorreo(string correo)
         {
             try
             {
-                _logger.LogInformation("Solicitando todos los usuarios.");
-                var usuarios = await _service.GetAllAsync();
-                return Ok(usuarios);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener todos los usuarios.");
-                return StatusCode(500, new ErrorResponseDTO { Message = "Error al obtener usuarios", StatusCode = 500 });
-            }
-        }
-
-        [Authorize]
-        [HttpGet("{id}")]
-        public async Task<IActionResult> GetById(int id)
-        {
-            try
-            {
-                _logger.LogInformation("Solicitud para obtener usuario con ID: {Id}", id);
-                var usuario = await _service.GetByIdAsync(id);
+                _logger.LogInformation("Solicitud para obtener usuario con correo: {Correo}", correo);
+                var usuario = await _service.GetByCorreoAsync(correo);
                 if (usuario == null)
                 {
-                    _logger.LogWarning("Usuario no encontrado con ID: {Id}", id);
+                    _logger.LogWarning("Usuario no encontrado con correo: {Correo}", correo);
                     return NotFound(new ErrorResponseDTO { Message = "Usuario no encontrado", StatusCode = 404 });
                 }
 
@@ -53,22 +36,22 @@ namespace back_end.Modules.usuarios.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener el usuario con ID: {Id}", id);
+                _logger.LogError(ex, "Error al obtener el usuario con correo: {Correo}", correo);
                 return StatusCode(500, new ErrorResponseDTO { Message = "Error al obtener usuario", StatusCode = 500 });
             }
         }
 
         [Authorize]
-        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(int id, [FromBody] UsuarioUpdateDTO dto)
+        [HttpPut("{correo}")]
+        public async Task<IActionResult> UpdateByCorreo(string correo, [FromBody] UsuarioUpdateDTO dto)
         {
             try
             {
-                _logger.LogInformation("Solicitud de actualización para usuario ID: {Id}", id);
-                var actualizado = await _service.UpdateAsync(id, dto);
+                _logger.LogInformation("Solicitud de actualización para usuario con correo: {Correo}", correo);
+                var actualizado = await _service.UpdateByCorreoAsync(correo, dto);
                 if (actualizado == null)
                 {
-                    _logger.LogWarning("No se encontró el usuario para actualizar con ID: {Id}", id);
+                    _logger.LogWarning("No se encontró el usuario para actualizar con correo: {Correo}", correo);
                     return NotFound(new ErrorResponseDTO { Message = "Usuario no encontrado", StatusCode = 404 });
                 }
 
@@ -76,7 +59,7 @@ namespace back_end.Modules.usuarios.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar el usuario con ID: {Id}", id);
+                _logger.LogError(ex, "Error al actualizar el usuario con correo: {Correo}", correo);
                 return StatusCode(500, new ErrorResponseDTO { Message = "Error al actualizar usuario", StatusCode = 500 });
             }
         }

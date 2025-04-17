@@ -8,6 +8,7 @@ namespace back_end.Modules.usuarios.Repositories
     {
         Task<List<Usuario>> GetAllAsync();
         Task<Usuario?> GetByIdAsync(int id);
+        Task<Usuario?> GetByCorreoAsync(string correo);
         Task<Usuario> UpdateAsync(Usuario usuario);
     }
 
@@ -28,6 +29,11 @@ namespace back_end.Modules.usuarios.Repositories
         public async Task<Usuario?> GetByIdAsync(int id)
         {
             return await _context.Usuarios.FindAsync(id);
+        }
+
+        public async Task<Usuario?> GetByCorreoAsync(string correo)
+        {
+            return await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == correo);
         }
 
         public async Task<Usuario> UpdateAsync(Usuario usuario)
