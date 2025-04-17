@@ -1,129 +1,121 @@
-using back_end.Core.Data;
+using back_end.Modules.servicios.DTOs;
 using back_end.Modules.servicios.Models;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using back_end.Modules.servicios.Repositories;
+using back_end.Modules.usuarios.Repositories;
 
-namespace back_end.Modules.servicios.services
+namespace back_end.Modules.servicios.Services
 {
     public interface IServicioService
     {
-        Task<List<Servicio>> GetAllAsync();
-        Task<Servicio?> GetByIdAsync(int id);
-        Task<List<Servicio>> GetByUsuarioIdAsync(int usuarioId);
-        Task<Servicio> CreateAsync(Servicio servicio);
-        Task<Servicio> UpdateAsync(Servicio servicio);
-        Task<bool> DeleteAsync(int id);
-        Task<bool> AsociarInventario(int servicioId, int itemId, int cantidad);
-        Task<bool> RemoverInventario(int servicioId, int itemId);
+        Task<List<ServicioResponseDTO>> GetByCorreoAsync(string correo);
+        Task<ServicioResponseDTO?> CreateAsync(string correo, ServicioCreateDTO dto);
+        Task<ServicioResponseDTO?> UpdateAsync(string correo, int id, ServicioUpdateDTO dto);
+        Task<bool> DeleteAsync(string correo, int id);
     }
 
     public class ServicioService : IServicioService
     {
-        private readonly DbEventusContext _context;
+        private readonly IServicioRepository _repository;
+        private readonly IUsuarioRepository _usuarioRepository;
 
-        public ServicioService(DbEventusContext context)
+        public ServicioService(IServicioRepository repository, IUsuarioRepository usuarioRepository)
         {
-            _context = context;
+            _repository = repository;
+            _usuarioRepository = usuarioRepository;
         }
 
-        public async Task<List<Servicio>> GetAllAsync()
+        public async Task<List<ServicioResponseDTO>> GetByCorreoAsync(string correo)
         {
-            return await _context.Servicios
-                .Include(s => s.Usuario)
-                .Include(s => s.ServicioInventarios)
-                    .ThenInclude(si => si.Item)
-                .ToListAsync();
+            var servicios = await _repository.GetByCorreoAsync(correo);
+
+            if (servicios == null || !servicios.Any())
+            {
+                return new List<ServicioResponseDTO>();
+            }
+
+            return servicios.Select(s => new ServicioResponseDTO
+            {
+                Id = s.Id,
+                NombreServicio = s.NombreServicio,
+                Descripcion = s.Descripcion,
+                PrecioBase = s.PrecioBase,
+                TipoEvento = s.TipoEvento,
+                Imagenes = s.Imagenes,
+                FechaCreacion = s.FechaCreacion
+            }).ToList();
         }
 
-        public async Task<Servicio?> GetByIdAsync(int id)
+        public async Task<ServicioResponseDTO?> CreateAsync(string correo, ServicioCreateDTO dto)
         {
-            return await _context.Servicios
-                .Include(s => s.Usuario)
-                .Include(s => s.ServicioInventarios)
-                    .ThenInclude(si => si.Item)
-                .FirstOrDefaultAsync(s => s.Id == id);
+            var usuario = await _usuarioRepository.GetByCorreoAsync(correo);
+            if (usuario == null)
+            {
+                return null;
+            }
+
+            var nuevo = new Servicio
+            {
+                UsuarioId = usuario.Id,
+                NombreServicio = dto.NombreServicio,
+                Descripcion = dto.Descripcion,
+                PrecioBase = dto.PrecioBase,
+                TipoEvento = dto.TipoEvento,
+                Imagenes = dto.Imagenes,
+                FechaCreacion = DateTime.UtcNow
+            };
+
+            var creado = await _repository.CreateAsync(nuevo);
+
+            return new ServicioResponseDTO
+            {
+                Id = creado.Id,
+                NombreServicio = creado.NombreServicio,
+                Descripcion = creado.Descripcion,
+                PrecioBase = creado.PrecioBase,
+                TipoEvento = creado.TipoEvento,
+                Imagenes = creado.Imagenes,
+                FechaCreacion = creado.FechaCreacion
+            };
         }
 
-        public async Task<List<Servicio>> GetByUsuarioIdAsync(int usuarioId)
+        public async Task<ServicioResponseDTO?> UpdateAsync(string correo, int id, ServicioUpdateDTO dto)
         {
-            return await _context.Servicios
-                .Include(s => s.ServicioInventarios)
-                    .ThenInclude(si => si.Item)
-                .Where(s => s.UsuarioId == usuarioId)
-                .ToListAsync();
+            var existente = await _repository.GetByIdAndCorreoAsync(id, correo);
+            if (existente == null)
+            {
+                return null;
+            }
+
+            // Actualiza solo si no es null
+            existente.NombreServicio = dto.NombreServicio ?? existente.NombreServicio;
+            existente.Descripcion = dto.Descripcion ?? existente.Descripcion;
+            existente.PrecioBase = dto.PrecioBase ?? existente.PrecioBase;
+            existente.TipoEvento = dto.TipoEvento ?? existente.TipoEvento;
+            existente.Imagenes = dto.Imagenes ?? existente.Imagenes;
+
+            var actualizado = await _repository.UpdateAsync(existente);
+
+            return new ServicioResponseDTO
+            {
+                Id = actualizado.Id,
+                NombreServicio = actualizado.NombreServicio,
+                Descripcion = actualizado.Descripcion,
+                PrecioBase = actualizado.PrecioBase,
+                TipoEvento = actualizado.TipoEvento,
+                Imagenes = actualizado.Imagenes,
+                FechaCreacion = actualizado.FechaCreacion
+            };
         }
 
-        public async Task<Servicio> CreateAsync(Servicio servicio)
+        public async Task<bool> DeleteAsync(string correo, int id)
         {
-            servicio.FechaCreacion = DateTime.Now;
-            
-            _context.Servicios.Add(servicio);
-            await _context.SaveChangesAsync();
-            return servicio;
-        }
-
-        public async Task<Servicio> UpdateAsync(Servicio servicio)
-        {
-            _context.Entry(servicio).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-            return servicio;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var servicio = await _context.Servicios.FindAsync(id);
+            var servicio = await _repository.GetByIdAndCorreoAsync(id, correo);
             if (servicio == null)
-                return false;
-
-            _context.Servicios.Remove(servicio);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> AsociarInventario(int servicioId, int itemId, int cantidad)
-        {
-            var servicio = await _context.Servicios.FindAsync(servicioId);
-            var item = await _context.Inventarios.FindAsync(itemId);
-            
-            if (servicio == null || item == null)
-                return false;
-
-            var asociacion = await _context.ServicioInventarios
-                .FirstOrDefaultAsync(si => si.ServicioId == servicioId && si.ItemId == itemId);
-
-            if (asociacion != null)
             {
-                asociacion.CantidadUtilizada = cantidad;
-            }
-            else
-            {
-                asociacion = new ServicioInventario
-                {
-                    ServicioId = servicioId,
-                    ItemId = itemId,
-                    CantidadUtilizada = cantidad
-                };
-                _context.ServicioInventarios.Add(asociacion);
+                return false;
             }
 
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> RemoverInventario(int servicioId, int itemId)
-        {
-            var asociacion = await _context.ServicioInventarios
-                .FirstOrDefaultAsync(si => si.ServicioId == servicioId && si.ItemId == itemId);
-                
-            if (asociacion == null)
-                return false;
-
-            _context.ServicioInventarios.Remove(asociacion);
-            await _context.SaveChangesAsync();
-            return true;
+            return await _repository.DeleteAsync(servicio);
         }
     }
 }
