@@ -66,6 +66,12 @@ namespace back_end.Modules.servicios.Services
 
             var creado = await _repository.CreateAsync(nuevo);
 
+            // Verificamos que creado no sea null antes de acceder a sus propiedades
+            if (creado == null)
+            {
+                return null; // o manejar el caso de error
+            }
+
             return new ServicioResponseDTO
             {
                 Id = creado.Id,
@@ -94,6 +100,12 @@ namespace back_end.Modules.servicios.Services
             existente.Imagenes = dto.Imagenes ?? existente.Imagenes;
 
             var actualizado = await _repository.UpdateAsync(existente);
+
+            // Verificamos que actualizado no sea null antes de acceder a sus propiedades
+            if (actualizado == null)
+            {
+                return null; // o manejar el caso de error
+            }
 
             return new ServicioResponseDTO
             {
