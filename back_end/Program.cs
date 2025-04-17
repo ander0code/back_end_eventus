@@ -4,7 +4,8 @@ using back_end.Middleware;
 using back_end.Modules.Auth.Repositories;
 using back_end.Modules.Auth.Services;
 using back_end.Modules.inventario.services;
-using back_end.Modules.reservas.services;
+using back_end.Modules.reservas.Services;
+using back_end.Modules.reservas.Repositories;
 using back_end.Modules.servicios.services;
 using back_end.Modules.usuarios.services;
 using back_end.Modules.usuarios.Repositories;
@@ -49,6 +50,7 @@ builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
 
 // Reservas Module
+builder.Services.AddScoped<IReservaRepository, ReservaRepository>();
 builder.Services.AddScoped<IReservaService, ReservaService>();
 
 // Servicios Module

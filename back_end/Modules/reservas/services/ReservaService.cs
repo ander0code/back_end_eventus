@@ -1,95 +1,88 @@
-using back_end.Core.Data;
+using back_end.Modules.reservas.DTOs;
 using back_end.Modules.reservas.Models;
-using Microsoft.EntityFrameworkCore;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
+using back_end.Modules.reservas.Repositories;
+using back_end.Modules.usuarios.Repositories;
 
-namespace back_end.Modules.reservas.services
+namespace back_end.Modules.reservas.Services
 {
     public interface IReservaService
     {
-        Task<List<Reserva>> GetAllAsync();
-        Task<Reserva?> GetByIdAsync(int id);
-        Task<List<Reserva>> GetByUsuarioIdAsync(int usuarioId);
-        Task<Reserva> CreateAsync(Reserva reserva);
-        Task<Reserva> UpdateAsync(Reserva reserva);
-        Task<bool> DeleteAsync(int id);
-        Task<bool> UpdateEstadoAsync(int id, string estado);
+        Task<List<ReservaResponseDTO>> GetByCorreoAsync(string correo);
+        Task<ReservaResponseDTO?> CreateAsync(string correo, ReservaCreateDTO dto);
+        Task<ReservaResponseDTO?> UpdateAsync(string correo, int id, ReservaUpdateDTO dto);
+        Task<bool> DeleteAsync(string correo, int id);
     }
 
     public class ReservaService : IReservaService
     {
-        private readonly DbEventusContext _context;
+        private readonly IReservaRepository _reservaRepo;
+        private readonly IUsuarioRepository _usuarioRepo;
 
-        public ReservaService(DbEventusContext context)
+        public ReservaService(IReservaRepository reservaRepo, IUsuarioRepository usuarioRepo)
         {
-            _context = context;
+            _reservaRepo = reservaRepo;
+            _usuarioRepo = usuarioRepo;
         }
 
-        public async Task<List<Reserva>> GetAllAsync()
+        public async Task<List<ReservaResponseDTO>> GetByCorreoAsync(string correo)
         {
-            return await _context.Reservas
-                .Include(r => r.Servicio)
-                .Include(r => r.Usuario)
-                .ToListAsync();
+            var reservas = await _reservaRepo.GetByCorreoUsuarioAsync(correo);
+            return reservas.Select(MapToDTO).ToList();
         }
 
-        public async Task<Reserva? > GetByIdAsync(int id)
+        public async Task<ReservaResponseDTO?> CreateAsync(string correo, ReservaCreateDTO dto)
         {
-            return await _context.Reservas
-                .Include(r => r.Servicio)
-                .Include(r => r.Usuario)
-                .FirstOrDefaultAsync(r => r.Id == id);
+            var usuario = await _usuarioRepo.GetByCorreoAsync(correo);
+            if (usuario == null) return null;
+
+            var reserva = new Reserva
+            {
+                UsuarioId = usuario.Id,
+                NombreCliente = dto.NombreCliente,
+                CorreoCliente = dto.CorreoCliente,
+                TelefonoCliente = dto.TelefonoCliente,
+                ServicioId = dto.ServicioId,
+                FechaEvento = dto.FechaEvento,
+                Estado = dto.Estado ?? "Pendiente",
+                Observaciones = dto.Observaciones,
+                FechaReserva = DateTime.UtcNow
+            };
+
+            var creada = await _reservaRepo.CreateAsync(reserva);
+            return MapToDTO(creada);
         }
 
-        public async Task<List<Reserva>> GetByUsuarioIdAsync(int usuarioId)
+        public async Task<ReservaResponseDTO?> UpdateAsync(string correo, int id, ReservaUpdateDTO dto)
         {
-            return await _context.Reservas
-                .Include(r => r.Servicio)
-                .Include(r => r.Usuario)
-                .Where(r => r.UsuarioId == usuarioId)
-                .ToListAsync();
+            var reserva = await _reservaRepo.GetByIdAndCorreoAsync(id, correo);
+            if (reserva == null) return null;
+
+            reserva.Estado = dto.Estado ?? reserva.Estado;
+            reserva.Observaciones = dto.Observaciones ?? reserva.Observaciones;
+
+            var actualizada = await _reservaRepo.UpdateAsync(reserva);
+            return MapToDTO(actualizada);
         }
 
-        public async Task<Reserva> CreateAsync(Reserva reserva)
+        public async Task<bool> DeleteAsync(string correo, int id)
         {
-            reserva.FechaReserva = DateTime.Now;
-            reserva.Estado = "pendiente";
-            
-            _context.Reservas.Add(reserva);
-            await _context.SaveChangesAsync();
-            return reserva;
+            var reserva = await _reservaRepo.GetByIdAndCorreoAsync(id, correo);
+            if (reserva == null) return false;
+
+            return await _reservaRepo.DeleteAsync(reserva);
         }
 
-        public async Task<Reserva> UpdateAsync(Reserva reserva)
+        private ReservaResponseDTO MapToDTO(Reserva r) => new ReservaResponseDTO
         {
-            _context.Entry(reserva).State = EntityState.Modified;
-            await _context.SaveChangesAsync();
-            return reserva;
-        }
-
-        public async Task<bool> DeleteAsync(int id)
-        {
-            var reserva = await _context.Reservas.FindAsync(id);
-            if (reserva == null)
-                return false;
-
-            _context.Reservas.Remove(reserva);
-            await _context.SaveChangesAsync();
-            return true;
-        }
-
-        public async Task<bool> UpdateEstadoAsync(int id, string estado)
-        {
-            var reserva = await _context.Reservas.FindAsync(id);
-            if (reserva == null)
-                return false;
-
-            reserva.Estado = estado;
-            await _context.SaveChangesAsync();
-            return true;
-        }
+            Id = r.Id,
+            NombreCliente = r.NombreCliente,
+            CorreoCliente = r.CorreoCliente,
+            TelefonoCliente = r.TelefonoCliente,
+            ServicioId = r.ServicioId,
+            FechaEvento = r.FechaEvento,
+            Estado = r.Estado,
+            FechaReserva = r.FechaReserva,
+            Observaciones = r.Observaciones
+        };
     }
 }
