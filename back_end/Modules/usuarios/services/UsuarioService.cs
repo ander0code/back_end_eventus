@@ -33,7 +33,7 @@ namespace back_end.Modules.usuarios.services
 
             usuario.Nombre = dto.Nombre ?? usuario.Nombre;
             usuario.Apellido = dto.Apellido ?? usuario.Apellido;
-            usuario.Telefono = dto.Telefono ?? usuario.Telefono;
+            usuario.Celular = dto.Telefono ?? usuario.Celular;
             usuario.Verificado = dto.Verificado ?? usuario.Verificado;
 
             var actualizado = await _repository.UpdateAsync(usuario);
@@ -45,8 +45,8 @@ namespace back_end.Modules.usuarios.services
             Id = u.Id,
             Nombre = u.Nombre,
             Apellido = u.Apellido,
-            Correo = u.Correo,
-            Telefono = u.Telefono,
+            Correo = u.CorreoElectronico,
+            Telefono = u.Celular,
             Verificado = u.Verificado,
             FechaRegistro = u.FechaRegistro
         };

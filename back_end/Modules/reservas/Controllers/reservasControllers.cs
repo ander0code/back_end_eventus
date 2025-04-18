@@ -53,8 +53,8 @@ namespace back_end.Modules.reservas.Controllers
         }
 
         [Authorize]
-        [HttpPut("{correo}/{id}")]
-        public async Task<IActionResult> Update(string correo, int id, [FromBody] ReservaUpdateDTO dto)
+        [HttpPut("{correo}/{id:guid}")]
+        public async Task<IActionResult> Update(string correo, Guid id, [FromBody] ReservaUpdateDTO dto)
         {
             try
             {
@@ -76,8 +76,8 @@ namespace back_end.Modules.reservas.Controllers
         }
 
         [Authorize]
-        [HttpDelete("{correo}/{id}")]
-        public async Task<IActionResult> Delete(string correo, int id)
+        [HttpDelete("{correo}/{id:guid}")]
+        public async Task<IActionResult> Delete(string correo, Guid id)
         {
             try
             {

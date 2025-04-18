@@ -53,8 +53,8 @@ namespace back_end.Modules.servicios.Controllers
         }
 
         [Authorize]
-        [HttpPut("{correo}/{id}")]
-        public async Task<IActionResult> Update(string correo, int id, [FromBody] ServicioUpdateDTO dto)
+        [HttpPut("{correo}/{id:guid}")]
+        public async Task<IActionResult> Update(string correo, Guid id, [FromBody] ServicioUpdateDTO dto)
         {
             try
             {
@@ -76,8 +76,8 @@ namespace back_end.Modules.servicios.Controllers
         }
 
         [Authorize]
-        [HttpDelete("{correo}/{id}")]
-        public async Task<IActionResult> Delete(string correo, int id)
+        [HttpDelete("{correo}/{id:guid}")]
+        public async Task<IActionResult> Delete(string correo, Guid id)
         {
             try
             {

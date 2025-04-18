@@ -10,7 +10,7 @@ namespace back_end.Modules.servicios.Repositories
         Task<Servicio?> CreateAsync(Servicio servicio);
         Task<Servicio?> UpdateAsync(Servicio servicio);
         Task<bool> DeleteAsync(Servicio servicio);
-        Task<Servicio?> GetByIdAndCorreoAsync(int id, string correo);
+        Task<Servicio?> GetByIdAndCorreoAsync(Guid id, string correo);
     }
 
     public class ServicioRepository : IServicioRepository
@@ -26,15 +26,15 @@ namespace back_end.Modules.servicios.Repositories
         {
             return await _context.Servicios
                 .Include(s => s.Usuario)
-                .Where(s => s.Usuario != null && s.Usuario.Correo == correo)
+                .Where(s => s.Usuario != null && s.Usuario.CorreoElectronico == correo)
                 .ToListAsync();
         }
 
-        public async Task<Servicio?> GetByIdAndCorreoAsync(int id, string correo)
+        public async Task<Servicio?> GetByIdAndCorreoAsync(Guid id, string correo)
         {
             return await _context.Servicios
                 .Include(s => s.Usuario)
-                .FirstOrDefaultAsync(s => s.Id == id && s.Usuario != null && s.Usuario.Correo == correo);
+                .FirstOrDefaultAsync(s => s.Id == id && s.Usuario != null && s.Usuario.CorreoElectronico == correo);
         }
 
         public async Task<Servicio?> CreateAsync(Servicio servicio)

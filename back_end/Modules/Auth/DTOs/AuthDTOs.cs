@@ -11,7 +11,7 @@ namespace back_end.Modules.Auth.DTOs
     {
         public required string Email { get; set; }
         public required string Token { get; set; }
-        public int UserId { get; set; }
+        public Guid UserId { get; set; }
         public string Nombre { get; set; } = string.Empty;
         public string Apellido { get; set; } = string.Empty;
     }
@@ -28,7 +28,7 @@ namespace back_end.Modules.Auth.DTOs
 
     public class RegisterResponseDTO
     {
-        public int UserId { get; set; }
+        public Guid UserId { get; set; }
         public string Email { get; set; } = string.Empty;
         public string Token { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;

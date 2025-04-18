@@ -33,7 +33,7 @@ namespace back_end.Modules.usuarios.Repositories
 
         public async Task<Usuario?> GetByCorreoAsync(string correo)
         {
-            return await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == correo);
+            return await _context.Usuarios.FirstOrDefaultAsync(u => u.CorreoElectronico == correo);
         }
 
         public async Task<Usuario> UpdateAsync(Usuario usuario)

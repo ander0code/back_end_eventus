@@ -24,7 +24,7 @@ namespace back_end.Modules.Auth.Repositories
         public UsuarioAuthDTO? GetUserByEmail(string email)
         {
             // Adaptamos la lógica para usar la entidad Usuario de nuestro modelo
-            var usuario = _context.Usuarios.FirstOrDefault(u => u.Correo == email);
+            var usuario = _context.Usuarios.FirstOrDefault(u => u.CorreoElectronico == email);
             
             if (usuario == null)
                 return null;
@@ -33,8 +33,8 @@ namespace back_end.Modules.Auth.Repositories
             return new UsuarioAuthDTO
             {
                 Id = usuario.Id,
-                Correo = usuario.Correo,
-                ContrasenaHash = usuario.ContrasenaHash,
+                Correo = usuario.CorreoElectronico,
+                ContrasenaHash = usuario.Contrasena,
                 Nombre = usuario.Nombre ?? string.Empty,
                 Apellido = usuario.Apellido ?? string.Empty,
                 Verificado = usuario.Verificado
@@ -48,9 +48,9 @@ namespace back_end.Modules.Auth.Repositories
             {
                 Nombre = request.Nombre,
                 Apellido = request.Apellido,
-                Correo = request.Email,
-                Telefono = request.Telefono,
-                ContrasenaHash = HashPassword(request.Password),
+                CorreoElectronico = request.Email,
+                Celular = request.Telefono,
+                Contrasena = HashPassword(request.Password),
                 Verificado = false,
                 TokenVerificacion = GenerateVerificationToken(),
                 FechaRegistro = DateTime.Now
@@ -64,8 +64,8 @@ namespace back_end.Modules.Auth.Repositories
             return new UsuarioAuthDTO
             {
                 Id = usuario.Id,
-                Correo = usuario.Correo,
-                ContrasenaHash = usuario.ContrasenaHash,
+                Correo = usuario.CorreoElectronico,
+                ContrasenaHash = usuario.Contrasena,
                 Nombre = usuario.Nombre ?? string.Empty,
                 Apellido = usuario.Apellido ?? string.Empty,
                 Verificado = usuario.Verificado
@@ -74,7 +74,7 @@ namespace back_end.Modules.Auth.Repositories
 
         public async Task<bool> ExistsByEmail(string email)
         {
-            return await _context.Usuarios.AnyAsync(u => u.Correo == email);
+            return await _context.Usuarios.AnyAsync(u => u.CorreoElectronico == email);
         }
 
         private string HashPassword(string password)

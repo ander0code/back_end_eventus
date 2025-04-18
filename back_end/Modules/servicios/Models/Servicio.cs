@@ -1,31 +1,26 @@
-﻿using System;
-using System.Collections.Generic;
-
+﻿namespace back_end.Modules.servicios.Models;
 using back_end.Modules.reservas.Models;
 using back_end.Modules.usuarios.Models;
-namespace back_end.Modules.servicios.Models;
 
 public partial class Servicio
 {
-    public int Id { get; set; }
+    public Guid Id { get; set; }
 
-    public int? UsuarioId { get; set; }
+    public string Nombre { get; set; } = null!;
 
-    public string? NombreServicio { get; set; }
+    public string? Categoria { get; set; }
 
     public string? Descripcion { get; set; }
 
     public decimal? PrecioBase { get; set; }
 
-    public string? TipoEvento { get; set; }
-
     public string? Imagenes { get; set; }
 
-    public DateTime? FechaCreacion { get; set; }
+    public Guid UsuarioId { get; set; }
 
-    public virtual ICollection<Reserva> Reservas { get; set; } = new List<Reserva>();
+    public virtual ICollection<ReservaServicio> ReservaServicios { get; set; } = new List<ReservaServicio>();
 
-    public virtual ICollection<ServicioInventario> ServicioInventarios { get; set; } = new List<ServicioInventario>();
+    public virtual ICollection<ServicioItem> ServicioItems { get; set; } = new List<ServicioItem>();
 
-    public virtual Usuario? Usuario { get; set; }
+    public virtual Usuario Usuario { get; set; } = null!;
 }

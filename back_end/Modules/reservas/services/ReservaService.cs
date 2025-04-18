@@ -9,8 +9,8 @@ namespace back_end.Modules.reservas.Services
     {
         Task<List<ReservaResponseDTO>> GetByCorreoAsync(string correo);
         Task<ReservaResponseDTO?> CreateAsync(string correo, ReservaCreateDTO dto);
-        Task<ReservaResponseDTO?> UpdateAsync(string correo, int id, ReservaUpdateDTO dto);
-        Task<bool> DeleteAsync(string correo, int id);
+        Task<ReservaResponseDTO?> UpdateAsync(string correo, Guid id, ReservaUpdateDTO dto);
+        Task<bool> DeleteAsync(string correo, Guid id);
     }
 
     public class ReservaService : IReservaService
@@ -38,33 +38,34 @@ namespace back_end.Modules.reservas.Services
             var reserva = new Reserva
             {
                 UsuarioId = usuario.Id,
-                NombreCliente = dto.NombreCliente,
-                CorreoCliente = dto.CorreoCliente,
-                TelefonoCliente = dto.TelefonoCliente,
-                ServicioId = dto.ServicioId,
+                NombreEvento = dto.NombreEvento,
                 FechaEvento = dto.FechaEvento,
+                HoraEvento = dto.HoraEvento,
+                TipoEvento = dto.TipoEvento,
+                Descripcion = dto.Descripcion,
                 Estado = dto.Estado ?? "Pendiente",
-                Observaciones = dto.Observaciones,
-                FechaReserva = DateTime.UtcNow
+                PrecioTotal = dto.PrecioTotal,
+                ClienteId = dto.ClienteId ?? Guid.Empty
+                // Otros campos se manejan mediante relaciones o no están en el modelo
             };
 
             var creada = await _reservaRepo.CreateAsync(reserva);
             return MapToDTO(creada);
         }
 
-        public async Task<ReservaResponseDTO?> UpdateAsync(string correo, int id, ReservaUpdateDTO dto)
+        public async Task<ReservaResponseDTO?> UpdateAsync(string correo, Guid id, ReservaUpdateDTO dto)
         {
             var reserva = await _reservaRepo.GetByIdAndCorreoAsync(id, correo);
             if (reserva == null) return null;
 
             reserva.Estado = dto.Estado ?? reserva.Estado;
-            reserva.Observaciones = dto.Observaciones ?? reserva.Observaciones;
+            // Actualizar otros campos según sean necesarios en el modelo
 
             var actualizada = await _reservaRepo.UpdateAsync(reserva);
             return MapToDTO(actualizada);
         }
 
-        public async Task<bool> DeleteAsync(string correo, int id)
+        public async Task<bool> DeleteAsync(string correo, Guid id)
         {
             var reserva = await _reservaRepo.GetByIdAndCorreoAsync(id, correo);
             if (reserva == null) return false;
@@ -75,14 +76,19 @@ namespace back_end.Modules.reservas.Services
         private ReservaResponseDTO MapToDTO(Reserva r) => new ReservaResponseDTO
         {
             Id = r.Id,
-            NombreCliente = r.NombreCliente,
-            CorreoCliente = r.CorreoCliente,
-            TelefonoCliente = r.TelefonoCliente,
-            ServicioId = r.ServicioId,
+            NombreEvento = r.NombreEvento,
             FechaEvento = r.FechaEvento,
+            HoraEvento = r.HoraEvento,
+            TipoEvento = r.TipoEvento,
+            Descripcion = r.Descripcion,
             Estado = r.Estado,
-            FechaReserva = r.FechaReserva,
-            Observaciones = r.Observaciones
+            PrecioTotal = r.PrecioTotal,
+            // Obtener datos del cliente desde la relación
+            NombreCliente = r.Cliente?.Nombre,
+            CorreoCliente = r.Cliente?.CorreoElectronico,
+            TelefonoCliente = r.Cliente?.Telefono,
+            // Otros campos pueden requerir acceso a relaciones
+            FechaReserva = DateTime.UtcNow // Mantener como está si no hay en el modelo
         };
     }
 }

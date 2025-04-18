@@ -7,7 +7,7 @@ namespace back_end.Modules.reservas.Repositories
     public interface IReservaRepository
     {
         Task<List<Reserva>> GetByCorreoUsuarioAsync(string correo);
-        Task<Reserva?> GetByIdAndCorreoAsync(int id, string correo);
+        Task<Reserva?> GetByIdAndCorreoAsync(Guid id, string correo);
         Task<Reserva> CreateAsync(Reserva reserva);
         Task<Reserva> UpdateAsync(Reserva reserva);
         Task<bool> DeleteAsync(Reserva reserva);
@@ -26,15 +26,21 @@ namespace back_end.Modules.reservas.Repositories
         {
             return await _context.Reservas
                 .Include(r => r.Usuario)
-                .Where(r => r.Usuario!.Correo == correo)
+                .Include(r => r.Cliente)
+                .Include(r => r.ReservaServicios)
+                    .ThenInclude(rs => rs.Servicio)
+                .Where(r => r.Usuario.CorreoElectronico == correo)
                 .ToListAsync();
         }
 
-        public async Task<Reserva?> GetByIdAndCorreoAsync(int id, string correo)
+        public async Task<Reserva?> GetByIdAndCorreoAsync(Guid id, string correo)
         {
             return await _context.Reservas
                 .Include(r => r.Usuario)
-                .FirstOrDefaultAsync(r => r.Id == id && r.Usuario!.Correo == correo);
+                .Include(r => r.Cliente)
+                .Include(r => r.ReservaServicios)
+                    .ThenInclude(rs => rs.Servicio)
+                .FirstOrDefaultAsync(r => r.Id == id && r.Usuario.CorreoElectronico == correo);
         }
 
         public async Task<Reserva> CreateAsync(Reserva reserva)

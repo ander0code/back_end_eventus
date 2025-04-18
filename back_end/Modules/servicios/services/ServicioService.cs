@@ -9,8 +9,8 @@ namespace back_end.Modules.servicios.Services
     {
         Task<List<ServicioResponseDTO>> GetByCorreoAsync(string correo);
         Task<ServicioResponseDTO?> CreateAsync(string correo, ServicioCreateDTO dto);
-        Task<ServicioResponseDTO?> UpdateAsync(string correo, int id, ServicioUpdateDTO dto);
-        Task<bool> DeleteAsync(string correo, int id);
+        Task<ServicioResponseDTO?> UpdateAsync(string correo, Guid id, ServicioUpdateDTO dto);
+        Task<bool> DeleteAsync(string correo, Guid id);
     }
 
     public class ServicioService : IServicioService
@@ -36,12 +36,12 @@ namespace back_end.Modules.servicios.Services
             return servicios.Select(s => new ServicioResponseDTO
             {
                 Id = s.Id,
-                NombreServicio = s.NombreServicio,
+                NombreServicio = s.Nombre,
                 Descripcion = s.Descripcion,
                 PrecioBase = s.PrecioBase,
-                TipoEvento = s.TipoEvento,
+                TipoEvento = s.Categoria,
                 Imagenes = s.Imagenes,
-                FechaCreacion = s.FechaCreacion
+                FechaCreacion = DateTime.UtcNow // Usar valor por defecto ya que no existe en el modelo
             }).ToList();
         }
 
@@ -56,12 +56,11 @@ namespace back_end.Modules.servicios.Services
             var nuevo = new Servicio
             {
                 UsuarioId = usuario.Id,
-                NombreServicio = dto.NombreServicio,
+                Nombre = dto.NombreServicio ?? "Servicio sin nombre",
                 Descripcion = dto.Descripcion,
                 PrecioBase = dto.PrecioBase,
-                TipoEvento = dto.TipoEvento,
-                Imagenes = dto.Imagenes,
-                FechaCreacion = DateTime.UtcNow
+                Categoria = dto.TipoEvento,
+                Imagenes = dto.Imagenes
             };
 
             var creado = await _repository.CreateAsync(nuevo);
@@ -75,16 +74,16 @@ namespace back_end.Modules.servicios.Services
             return new ServicioResponseDTO
             {
                 Id = creado.Id,
-                NombreServicio = creado.NombreServicio,
+                NombreServicio = creado.Nombre,
                 Descripcion = creado.Descripcion,
                 PrecioBase = creado.PrecioBase,
-                TipoEvento = creado.TipoEvento,
+                TipoEvento = creado.Categoria,
                 Imagenes = creado.Imagenes,
-                FechaCreacion = creado.FechaCreacion
+                FechaCreacion = DateTime.UtcNow // Usar valor actual ya que no existe en el modelo
             };
         }
 
-        public async Task<ServicioResponseDTO?> UpdateAsync(string correo, int id, ServicioUpdateDTO dto)
+        public async Task<ServicioResponseDTO?> UpdateAsync(string correo, Guid id, ServicioUpdateDTO dto)
         {
             var existente = await _repository.GetByIdAndCorreoAsync(id, correo);
             if (existente == null)
@@ -93,10 +92,10 @@ namespace back_end.Modules.servicios.Services
             }
 
             // Actualiza solo si no es null
-            existente.NombreServicio = dto.NombreServicio ?? existente.NombreServicio;
+            existente.Nombre = dto.NombreServicio ?? existente.Nombre;
             existente.Descripcion = dto.Descripcion ?? existente.Descripcion;
             existente.PrecioBase = dto.PrecioBase ?? existente.PrecioBase;
-            existente.TipoEvento = dto.TipoEvento ?? existente.TipoEvento;
+            existente.Categoria = dto.TipoEvento ?? existente.Categoria;
             existente.Imagenes = dto.Imagenes ?? existente.Imagenes;
 
             var actualizado = await _repository.UpdateAsync(existente);
@@ -110,16 +109,16 @@ namespace back_end.Modules.servicios.Services
             return new ServicioResponseDTO
             {
                 Id = actualizado.Id,
-                NombreServicio = actualizado.NombreServicio,
+                NombreServicio = actualizado.Nombre,
                 Descripcion = actualizado.Descripcion,
                 PrecioBase = actualizado.PrecioBase,
-                TipoEvento = actualizado.TipoEvento,
+                TipoEvento = actualizado.Categoria,
                 Imagenes = actualizado.Imagenes,
-                FechaCreacion = actualizado.FechaCreacion
+                FechaCreacion = DateTime.UtcNow // Usar valor actual ya que no existe en el modelo
             };
         }
 
-        public async Task<bool> DeleteAsync(string correo, int id)
+        public async Task<bool> DeleteAsync(string correo, Guid id)
         {
             var servicio = await _repository.GetByIdAndCorreoAsync(id, correo);
             if (servicio == null)
