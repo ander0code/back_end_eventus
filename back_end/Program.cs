@@ -3,6 +3,7 @@ using back_end.Core.Configurations;
 using back_end.Middleware;
 using back_end.Modules.Auth.Repositories;
 using back_end.Modules.Auth.Services;
+using back_end.Modules.inventario.Repositories;
 using back_end.Modules.inventario.services;
 using back_end.Modules.reservas.Services;
 using back_end.Modules.reservas.Repositories;
@@ -67,6 +68,7 @@ builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 builder.Services.AddScoped<IServicioService, ServicioService>();
 
 // Inventario Module
+builder.Services.AddScoped<IInventarioRepository, InventarioRepository>();
 builder.Services.AddScoped<IInventarioService, InventarioService>();
 
 var app = builder.Build();

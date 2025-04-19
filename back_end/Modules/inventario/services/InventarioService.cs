@@ -1,8 +1,7 @@
-using back_end.Core.Data;
 using back_end.Modules.inventario.DTOs;
 using back_end.Modules.inventario.Models;
+using back_end.Modules.inventario.Repositories;
 using back_end.Modules.usuarios.Repositories;
-using Microsoft.EntityFrameworkCore;
 
 namespace back_end.Modules.inventario.services
 {
@@ -16,54 +15,42 @@ namespace back_end.Modules.inventario.services
         Task<InventarioResponseDTO?> UpdateAsync(Guid id, string correo, InventarioUpdateDTO dto);
         Task<bool> DeleteAsync(Guid id, string correo);
         Task<bool> ActualizarStockAsync(Guid id, string correo, int cantidad);
+        Task<List<InventarioResponseDTO>> SearchByNameOrCategoryAsync(string correo, string searchTerm);
+        Task<List<InventarioResponseDTO>> GetByStockBelowMinAsync(string correo, int minStock);
     }
 
     public class InventarioService : IInventarioService
     {
-        private readonly DbEventusContext _context;
+        private readonly IInventarioRepository _inventarioRepository;
         private readonly IUsuarioRepository _usuarioRepository;
 
-        public InventarioService(DbEventusContext context, IUsuarioRepository usuarioRepository)
+        public InventarioService(IInventarioRepository inventarioRepository, IUsuarioRepository usuarioRepository)
         {
-            _context = context;
+            _inventarioRepository = inventarioRepository;
             _usuarioRepository = usuarioRepository;
         }
 
         public async Task<List<InventarioResponseDTO>> GetAllAsync()
         {
-            var inventarios = await _context.Inventarios
-                .Include(i => i.Usuario)
-                .ToListAsync();
-                
+            var inventarios = await _inventarioRepository.GetAllAsync();
             return inventarios.Select(MapToDTO).ToList();
         }
 
         public async Task<InventarioResponseDTO?> GetByIdAsync(Guid id)
         {
-            var inventario = await _context.Inventarios
-                .Include(i => i.Usuario)
-                .FirstOrDefaultAsync(i => i.Id == id);
-                
+            var inventario = await _inventarioRepository.GetByIdAsync(id);
             return inventario == null ? null : MapToDTO(inventario);
         }
 
         public async Task<List<InventarioResponseDTO>> GetByUsuarioIdAsync(Guid usuarioId)
         {
-            var inventarios = await _context.Inventarios
-                .Include(i => i.Usuario)
-                .Where(i => i.UsuarioId == usuarioId)
-                .ToListAsync();
-                
+            var inventarios = await _inventarioRepository.GetByUsuarioIdAsync(usuarioId);
             return inventarios.Select(MapToDTO).ToList();
         }
         
         public async Task<List<InventarioResponseDTO>> GetByCorreoAsync(string correo)
         {
-            var inventarios = await _context.Inventarios
-                .Include(i => i.Usuario)
-                .Where(i => i.Usuario.CorreoElectronico == correo)
-                .ToListAsync();
-                
+            var inventarios = await _inventarioRepository.GetByCorreoAsync(correo);
             return inventarios.Select(MapToDTO).ToList();
         }
 
@@ -82,23 +69,16 @@ namespace back_end.Modules.inventario.services
                 UsuarioId = usuario.Id
             };
             
-            _context.Inventarios.Add(inventario);
-            await _context.SaveChangesAsync();
-            
-            // Recargar con el usuario incluido para el mapeo
-            var creado = await _context.Inventarios
-                .Include(i => i.Usuario)
-                .FirstOrDefaultAsync(i => i.Id == inventario.Id);
-                
+            var creado = await _inventarioRepository.CreateAsync(inventario);
             return creado == null ? null : MapToDTO(creado);
         }
 
         public async Task<InventarioResponseDTO?> UpdateAsync(Guid id, string correo, InventarioUpdateDTO dto)
         {
-            var inventario = await _context.Inventarios
-                .Include(i => i.Usuario)
-                .FirstOrDefaultAsync(i => i.Id == id && i.Usuario.CorreoElectronico == correo);
-                
+            // Primero verificamos que el item pertenezca al usuario
+            var inventarios = await _inventarioRepository.GetByCorreoAsync(correo);
+            var inventario = inventarios.FirstOrDefault(i => i.Id == id);
+            
             if (inventario == null) return null;
             
             // Actualizar solo las propiedades que no son nulas
@@ -107,32 +87,56 @@ namespace back_end.Modules.inventario.services
             if (dto.Stock != null) inventario.Stock = dto.Stock;
             if (dto.Categoria != null) inventario.Categoria = dto.Categoria;
             
-            await _context.SaveChangesAsync();
-            return MapToDTO(inventario);
+            var actualizado = await _inventarioRepository.UpdateAsync(inventario);
+            return actualizado == null ? null : MapToDTO(actualizado);
         }
 
         public async Task<bool> DeleteAsync(Guid id, string correo)
         {
-            var inventario = await _context.Inventarios
-                .Include(i => i.Usuario)
-                .FirstOrDefaultAsync(i => i.Id == id && i.Usuario.CorreoElectronico == correo);
-                
+            // Primero verificamos que el item pertenezca al usuario
+            var inventarios = await _inventarioRepository.GetByCorreoAsync(correo);
+            var inventario = inventarios.FirstOrDefault(i => i.Id == id);
+            
             if (inventario == null) return false;
             
-            _context.Inventarios.Remove(inventario);
-            return await _context.SaveChangesAsync() > 0;
+            return await _inventarioRepository.DeleteAsync(inventario);
         }
 
         public async Task<bool> ActualizarStockAsync(Guid id, string correo, int cantidad)
         {
-            var inventario = await _context.Inventarios
-                .Include(i => i.Usuario)
-                .FirstOrDefaultAsync(i => i.Id == id && i.Usuario.CorreoElectronico == correo);
-                
+            // Primero verificamos que el item pertenezca al usuario
+            var inventarios = await _inventarioRepository.GetByCorreoAsync(correo);
+            var inventario = inventarios.FirstOrDefault(i => i.Id == id);
+            
             if (inventario == null) return false;
             
-            inventario.Stock = cantidad;
-            return await _context.SaveChangesAsync() > 0;
+            return await _inventarioRepository.ActualizarStockAsync(id, cantidad);
+        }
+        
+        public async Task<List<InventarioResponseDTO>> SearchByNameOrCategoryAsync(string correo, string searchTerm)
+        {
+            // Buscar todos los items por nombre o categoría
+            var allResults = await _inventarioRepository.SearchByNameOrCategoryAsync(searchTerm);
+            
+            // Filtrar solo los del usuario actual
+            var usuario = await _usuarioRepository.GetByCorreoAsync(correo);
+            if (usuario == null) return new List<InventarioResponseDTO>();
+            
+            var filtered = allResults.Where(i => i.UsuarioId == usuario.Id).ToList();
+            return filtered.Select(MapToDTO).ToList();
+        }
+        
+        public async Task<List<InventarioResponseDTO>> GetByStockBelowMinAsync(string correo, int minStock)
+        {
+            // Buscar items con stock por debajo del mínimo
+            var allResults = await _inventarioRepository.GetByStockBelowMinAsync(minStock);
+            
+            // Filtrar solo los del usuario actual
+            var usuario = await _usuarioRepository.GetByCorreoAsync(correo);
+            if (usuario == null) return new List<InventarioResponseDTO>();
+            
+            var filtered = allResults.Where(i => i.UsuarioId == usuario.Id).ToList();
+            return filtered.Select(MapToDTO).ToList();
         }
         
         private InventarioResponseDTO MapToDTO(Inventario inventario)
