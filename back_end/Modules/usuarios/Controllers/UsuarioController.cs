@@ -7,6 +7,7 @@ namespace back_end.Modules.usuarios.Controllers
 {
     [ApiController]
     [Route("api/usuarios")]
+    [Authorize]
     public class UsuarioController : ControllerBase
     {
         private readonly IUsuarioService _service;
@@ -18,7 +19,6 @@ namespace back_end.Modules.usuarios.Controllers
             _logger = logger;
         }
 
-        [Authorize]
         [HttpGet("{correo}")]
         public async Task<IActionResult> GetByCorreo(string correo)
         {
@@ -41,7 +41,6 @@ namespace back_end.Modules.usuarios.Controllers
             }
         }
 
-        [Authorize]
         [HttpPut("{correo}")]
         public async Task<IActionResult> UpdateByCorreo(string correo, [FromBody] UsuarioUpdateDTO dto)
         {
