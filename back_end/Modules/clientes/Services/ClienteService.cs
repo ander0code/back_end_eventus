@@ -11,6 +11,8 @@ namespace back_end.Modules.clientes.Services
         Task<ClienteResponseDTO?> CreateAsync(ClienteCreateDTO dto);
         Task<ClienteResponseDTO?> UpdateAsync(Guid id, ClienteUpdateDTO dto);
         Task<bool> DeleteAsync(Guid id);
+        Task<List<ClienteResponseDTO>> SearchAsync(string? query);
+        Task<List<ClienteResponseDTO>> FilterByTipoClienteAsync(string tipoCliente);
     }
 
     public class ClienteService : IClienteService
@@ -73,15 +75,27 @@ namespace back_end.Modules.clientes.Services
             return await _repository.DeleteAsync(cliente);
         }
 
+        public async Task<List<ClienteResponseDTO>> SearchAsync(string? query)
+        {
+            var clientes = await _repository.SearchAsync(query);
+            return clientes.Select(MapToDTO).ToList();
+        }
+
+        public async Task<List<ClienteResponseDTO>> FilterByTipoClienteAsync(string tipoCliente)
+        {
+            var clientes = await _repository.FilterByTipoClienteAsync(tipoCliente);
+            return clientes.Select(MapToDTO).ToList();
+        }
+
         private ClienteResponseDTO MapToDTO(Cliente c) => new ClienteResponseDTO
-{
-        Id = c.Id,
-        TipoCliente = c.TipoCliente,
-        Nombre = c.Nombre,
-        CorreoElectronico = c.CorreoElectronico,
-        Telefono = c.Telefono,
-        Direccion = c.Direccion,
-        FechaRegistro = c.FechaRegistro
-    };
+        {
+            Id = c.Id,
+            TipoCliente = c.TipoCliente,
+            Nombre = c.Nombre,
+            CorreoElectronico = c.CorreoElectronico,
+            Telefono = c.Telefono,
+            Direccion = c.Direccion,
+            FechaRegistro = c.FechaRegistro
+        };
     }
 }
