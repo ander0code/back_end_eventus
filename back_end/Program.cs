@@ -8,6 +8,8 @@ using back_end.Modules.reservas.Services;
 using back_end.Modules.reservas.Repositories;
 using back_end.Modules.servicios.Services;
 using back_end.Modules.servicios.Repositories;
+using back_end.Modules.clientes.Repositories;
+using back_end.Modules.clientes.Services;
 using back_end.Modules.usuarios.services;
 using back_end.Modules.usuarios.Repositories;
 using Microsoft.EntityFrameworkCore;
@@ -68,6 +70,10 @@ builder.Services.AddScoped<IServicioService, ServicioService>();
 
 // Inventario Module
 builder.Services.AddScoped<IInventarioService, InventarioService>();
+
+// Cliente Module
+builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
+builder.Services.AddScoped<IClienteService, ClienteService>();
 
 var app = builder.Build();
 
