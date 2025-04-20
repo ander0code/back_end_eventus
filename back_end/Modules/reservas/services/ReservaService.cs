@@ -82,7 +82,7 @@ namespace back_end.Modules.reservas.Services
                     CorreoElectronico = dto.CorreoCliente,
                     Telefono = dto.TelefonoCliente,
                     UsuarioId = usuario.Id,
-                    TipoCliente = "Cliente de reserva", // Valor por defecto
+                    TipoCliente = "INDIVIDUAL", // Valor por defecto que cumple con la restricción CHECK
                     FechaRegistro = DateTime.UtcNow
                 };
                 
