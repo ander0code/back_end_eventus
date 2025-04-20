@@ -23,42 +23,20 @@ namespace back_end.Modules.clientes.Controllers
         [HttpGet("usuario/{correo}")]
         public async Task<IActionResult> GetByUsuarioCorreo(string correo)
         {
-            try
-            {
-                _logger.LogInformation("Solicitud para obtener clientes del usuario con correo: {Correo}", correo);
-                var clientes = await _clienteService.GetByUsuarioCorreoAsync(correo);
-
-                return Ok(clientes);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener clientes del usuario con correo: {Correo}", correo);
-                return StatusCode(500, new ErrorResponseDTO { Message = "Error al obtener clientes", StatusCode = 500 });
-            }
+            var clientes = await _clienteService.GetByUsuarioCorreoAsync(correo);
+            return Ok(clientes);
         }
 
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ClienteCreateDTO dto)
+        // POST: api/clientes/{correo}
+        [HttpPost("{correo}")]
+        public async Task<IActionResult> Create(string correo, [FromBody] ClienteCreateDTO dto)
         {
-            try
-            {
-                _logger.LogInformation("Solicitud para crear cliente para el usuario con correo: {Correo}", dto.UsuarioCorreo);
-                var cliente = await _clienteService.CreateAsync(dto);
-                if (cliente == null)
-                {
-                    _logger.LogWarning("No se encontró el usuario con correo: {Correo}", dto.UsuarioCorreo);
-                    return BadRequest(new ErrorResponseDTO { Message = "Usuario no encontrado", StatusCode = 400 });
-                }
-
-                return CreatedAtAction(nameof(GetByUsuarioCorreo), new { correo = dto.UsuarioCorreo }, cliente);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al crear cliente para el usuario con correo: {Correo}", dto.UsuarioCorreo);
-                return StatusCode(500, new ErrorResponseDTO { Message = "Error al crear cliente", StatusCode = 500 });
-            }
+            var cliente = await _clienteService.CreateAsync(correo, dto);
+            if (cliente == null) return BadRequest("Usuario no encontrado");
+            return CreatedAtAction(nameof(GetByUsuarioCorreo), new { correo = correo }, cliente);
         }
 
+        // PUT: api/clientes/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] ClienteUpdateDTO dto)
         {
