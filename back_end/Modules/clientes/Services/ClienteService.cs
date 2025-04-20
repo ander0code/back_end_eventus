@@ -11,6 +11,8 @@ namespace back_end.Modules.clientes.Services
         Task<ClienteResponseDTO?> CreateAsync(string correo, ClienteCreateDTO dto);
         Task<ClienteResponseDTO?> UpdateAsync(Guid id, ClienteUpdateDTO dto);
         Task<bool> DeleteAsync(Guid id);
+        Task<List<ClienteResponseDTO>> SearchAsync(string? query);
+        Task<List<ClienteResponseDTO>> FilterByTipoClienteAsync(string tipoCliente);
     }
 
     public class ClienteService : IClienteService
@@ -73,6 +75,18 @@ namespace back_end.Modules.clientes.Services
             return await _repository.DeleteAsync(cliente);
         }
 
+        public async Task<List<ClienteResponseDTO>> SearchAsync(string? query)
+        {
+            var clientes = await _repository.SearchAsync(query);
+            return clientes.Select(MapToDTO).ToList();
+        }
+
+        public async Task<List<ClienteResponseDTO>> FilterByTipoClienteAsync(string tipoCliente)
+        {
+            var clientes = await _repository.FilterByTipoClienteAsync(tipoCliente);
+            return clientes.Select(MapToDTO).ToList();
+        }
+
         private ClienteResponseDTO MapToDTO(Cliente c) => new ClienteResponseDTO
         {
             Id = c.Id,
@@ -81,7 +95,12 @@ namespace back_end.Modules.clientes.Services
             CorreoElectronico = c.CorreoElectronico,
             Telefono = c.Telefono,
             Direccion = c.Direccion,
-            FechaRegistro = c.FechaRegistro
+            FechaRegistro = c.FechaRegistro,
+            TotalReservas = c.Reservas.Count,
+            UltimaFechaReserva = c.Reservas
+                .OrderByDescending(r => r.FechaEvento)
+                .Select(r => r.FechaEvento)
+                .FirstOrDefault()
         };
     }
 }

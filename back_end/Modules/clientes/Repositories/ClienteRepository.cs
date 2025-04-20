@@ -11,6 +11,8 @@ namespace back_end.Modules.clientes.Repositories
         Task<Cliente> CreateAsync(Cliente cliente);
         Task<Cliente> UpdateAsync(Cliente cliente);
         Task<bool> DeleteAsync(Cliente cliente);
+        Task<List<Cliente>> SearchAsync(string? query);
+        Task<List<Cliente>> FilterByTipoClienteAsync(string tipoCliente);
     }
 
     public class ClienteRepository : IClienteRepository
@@ -26,6 +28,7 @@ namespace back_end.Modules.clientes.Repositories
         {
             return await _context.Clientes
                 .Include(c => c.Usuario)
+                .Include(c => c.Reservas) // <-- importante
                 .Where(c => c.Usuario.CorreoElectronico == correoUsuario)
                 .ToListAsync();
         }
@@ -53,6 +56,25 @@ namespace back_end.Modules.clientes.Repositories
         {
             _context.Clientes.Remove(cliente);
             return await _context.SaveChangesAsync() > 0;
+        }
+
+        public async Task<List<Cliente>> SearchAsync(string? query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return new List<Cliente>();
+
+            return await _context.Clientes
+                .Where(c => (c.Nombre != null && c.Nombre.Contains(query)) ||
+                            (c.CorreoElectronico != null && c.CorreoElectronico.Contains(query)) ||
+                            (c.Telefono != null && c.Telefono.Contains(query)))
+                .ToListAsync();
+        }
+
+        public async Task<List<Cliente>> FilterByTipoClienteAsync(string tipoCliente)
+        {
+            return await _context.Clientes
+                .Where(c => c.TipoCliente == tipoCliente)
+                .ToListAsync();
         }
     }
 }
