@@ -95,7 +95,12 @@ namespace back_end.Modules.clientes.Services
             CorreoElectronico = c.CorreoElectronico,
             Telefono = c.Telefono,
             Direccion = c.Direccion,
-            FechaRegistro = c.FechaRegistro
+            FechaRegistro = c.FechaRegistro,
+            TotalReservas = c.Reservas.Count,
+            UltimaFechaReserva = c.Reservas
+                .OrderByDescending(r => r.FechaEvento)
+                .Select(r => r.FechaEvento)
+                .FirstOrDefault()
         };
     }
 }

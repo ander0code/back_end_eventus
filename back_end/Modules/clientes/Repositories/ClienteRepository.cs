@@ -28,6 +28,7 @@ namespace back_end.Modules.clientes.Repositories
         {
             return await _context.Clientes
                 .Include(c => c.Usuario)
+                .Include(c => c.Reservas) // <-- importante
                 .Where(c => c.Usuario.CorreoElectronico == correoUsuario)
                 .ToListAsync();
         }

@@ -9,4 +9,6 @@ public class ClienteResponseDTO
     public string? Telefono { get; set; }
     public string? Direccion { get; set; }
     public DateTime? FechaRegistro { get; set; }
+    public int TotalReservas { get; set; }
+    public DateOnly? UltimaFechaReserva { get; set; }
 }
