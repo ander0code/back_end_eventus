@@ -8,7 +8,7 @@ namespace back_end.Modules.clientes.Services
     public interface IClienteService
     {
         Task<List<ClienteResponseDTO>> GetByUsuarioCorreoAsync(string correo);
-        Task<ClienteResponseDTO?> CreateAsync(ClienteCreateDTO dto);
+        Task<ClienteResponseDTO?> CreateAsync(string correo, ClienteCreateDTO dto);
         Task<ClienteResponseDTO?> UpdateAsync(Guid id, ClienteUpdateDTO dto);
         Task<bool> DeleteAsync(Guid id);
     }
@@ -30,9 +30,9 @@ namespace back_end.Modules.clientes.Services
             return clientes.Select(MapToDTO).ToList();
         }
 
-        public async Task<ClienteResponseDTO?> CreateAsync(ClienteCreateDTO dto)
+        public async Task<ClienteResponseDTO?> CreateAsync(string correo, ClienteCreateDTO dto)
         {
-            var usuario = await _usuarioRepository.GetByCorreoAsync(dto.UsuarioCorreo);
+            var usuario = await _usuarioRepository.GetByCorreoAsync(correo);
             if (usuario == null) return null;
 
             var cliente = new Cliente
@@ -74,14 +74,14 @@ namespace back_end.Modules.clientes.Services
         }
 
         private ClienteResponseDTO MapToDTO(Cliente c) => new ClienteResponseDTO
-{
-        Id = c.Id,
-        TipoCliente = c.TipoCliente,
-        Nombre = c.Nombre,
-        CorreoElectronico = c.CorreoElectronico,
-        Telefono = c.Telefono,
-        Direccion = c.Direccion,
-        FechaRegistro = c.FechaRegistro
-    };
+        {
+            Id = c.Id,
+            TipoCliente = c.TipoCliente,
+            Nombre = c.Nombre,
+            CorreoElectronico = c.CorreoElectronico,
+            Telefono = c.Telefono,
+            Direccion = c.Direccion,
+            FechaRegistro = c.FechaRegistro
+        };
     }
 }

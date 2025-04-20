@@ -25,13 +25,13 @@ namespace back_end.Modules.clientes.Controllers
             return Ok(clientes);
         }
 
-        // POST: api/clientes
-        [HttpPost]
-        public async Task<IActionResult> Create([FromBody] ClienteCreateDTO dto)
+        // POST: api/clientes/{correo}
+        [HttpPost("{correo}")]
+        public async Task<IActionResult> Create(string correo, [FromBody] ClienteCreateDTO dto)
         {
-            var cliente = await _clienteService.CreateAsync(dto);
+            var cliente = await _clienteService.CreateAsync(correo, dto);
             if (cliente == null) return BadRequest("Usuario no encontrado");
-            return CreatedAtAction(nameof(GetByUsuarioCorreo), new { correo = dto.UsuarioCorreo }, cliente);
+            return CreatedAtAction(nameof(GetByUsuarioCorreo), new { correo = correo }, cliente);
         }
 
         // PUT: api/clientes/{id}

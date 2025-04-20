@@ -11,6 +11,12 @@ namespace back_end.Modules.reservas.Repositories
         Task<Reserva> CreateAsync(Reserva reserva);
         Task<Reserva> UpdateAsync(Reserva reserva);
         Task<bool> DeleteAsync(Reserva reserva);
+        
+        // Métodos para gestionar ReservaServicio
+        Task<ReservaServicio?> AddReservaServicioAsync(ReservaServicio reservaServicio);
+        Task<ReservaServicio?> UpdateReservaServicioAsync(ReservaServicio reservaServicio);
+        Task<bool> RemoveReservaServicioAsync(ReservaServicio reservaServicio);
+        Task<List<ReservaServicio>> GetReservaServiciosByReservaIdAsync(Guid reservaId);
     }
 
     public class ReservaRepository : IReservaRepository
@@ -61,6 +67,36 @@ namespace back_end.Modules.reservas.Repositories
         {
             _context.Reservas.Remove(reserva);
             return await _context.SaveChangesAsync() > 0;
+        }
+        
+        // Implementación de métodos para gestionar ReservaServicio
+        
+        public async Task<ReservaServicio?> AddReservaServicioAsync(ReservaServicio reservaServicio)
+        {
+            _context.ReservaServicios.Add(reservaServicio);
+            await _context.SaveChangesAsync();
+            return reservaServicio;
+        }
+        
+        public async Task<ReservaServicio?> UpdateReservaServicioAsync(ReservaServicio reservaServicio)
+        {
+            _context.Entry(reservaServicio).State = EntityState.Modified;
+            await _context.SaveChangesAsync();
+            return reservaServicio;
+        }
+        
+        public async Task<bool> RemoveReservaServicioAsync(ReservaServicio reservaServicio)
+        {
+            _context.ReservaServicios.Remove(reservaServicio);
+            return await _context.SaveChangesAsync() > 0;
+        }
+        
+        public async Task<List<ReservaServicio>> GetReservaServiciosByReservaIdAsync(Guid reservaId)
+        {
+            return await _context.ReservaServicios
+                .Include(rs => rs.Servicio)
+                .Where(rs => rs.ReservaId == reservaId)
+                .ToListAsync();
         }
     }
 }

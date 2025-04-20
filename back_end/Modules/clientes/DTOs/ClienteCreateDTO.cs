@@ -2,7 +2,6 @@ namespace back_end.Modules.clientes.DTOs;
 
 public class ClienteCreateDTO
 {
-    public string UsuarioCorreo { get; set; } = null!; 
     public string? TipoCliente { get; set; } = null!;
     public string Nombre { get; set; } = null!;
     public string? CorreoElectronico { get; set; }
