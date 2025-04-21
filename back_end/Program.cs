@@ -13,6 +13,7 @@ using back_end.Modules.clientes.Repositories;
 using back_end.Modules.clientes.Services;
 using back_end.Modules.usuarios.services;
 using back_end.Modules.usuarios.Repositories;
+using back_end.Modules.dashboard.services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -76,6 +77,9 @@ builder.Services.AddScoped<IInventarioService, InventarioService>();
 // Cliente Module
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
+
+// Dashboard Module
+builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 var app = builder.Build();
 

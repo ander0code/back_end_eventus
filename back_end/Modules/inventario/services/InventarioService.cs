@@ -93,13 +93,24 @@ namespace back_end.Modules.inventario.services
 
         public async Task<bool> DeleteAsync(Guid id, string correo)
         {
-            // Primero verificamos que el item pertenezca al usuario
-            var inventarios = await _inventarioRepository.GetByCorreoAsync(correo);
-            var inventario = inventarios.FirstOrDefault(i => i.Id == id);
-            
-            if (inventario == null) return false;
-            
-            return await _inventarioRepository.DeleteAsync(inventario);
+            try
+            {
+                // Primero verificamos que el item pertenezca al usuario
+                var inventarios = await _inventarioRepository.GetByCorreoAsync(correo);
+                var inventario = inventarios.FirstOrDefault(i => i.Id == id);
+                
+                if (inventario == null) return false;
+                
+                // El repositorio ahora eliminará primero los ServicioItems relacionados
+                // y luego el elemento de inventario
+                return await _inventarioRepository.DeleteAsync(inventario);
+            }
+            catch (Exception ex)
+            {
+                // Log the exception
+                Console.WriteLine($"Error al eliminar inventario: {ex.Message}");
+                throw; // Re-throw to let controller handle it
+            }
         }
 
         public async Task<bool> ActualizarStockAsync(Guid id, string correo, int cantidad)
