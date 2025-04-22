@@ -17,7 +17,7 @@ namespace back_end.Modules.reservas.Services
         Task<bool> DeleteAsync(string correo, Guid id);
         
         // Servicios de la reserva
-        Task<bool> AddServicioToReservaAsync(string correo, Guid reservaId, Guid servicioId, int cantidad, decimal? precio);
+        Task<bool> AddServicioToReservaAsync(string correo, Guid reservaId, Guid servicioId);
         Task<bool> RemoveServicioFromReservaAsync(string correo, Guid reservaId, Guid servicioId);
         Task<bool> UpdateServicioInReservaAsync(string correo, Guid reservaId, Guid servicioId, int cantidad, decimal? precio);
         Task<decimal> CalcularTotalReservaAsync(string correo, Guid reservaId);
@@ -122,17 +122,7 @@ namespace back_end.Modules.reservas.Services
                 
                 foreach (var servicioId in dto.Servicios)
                 {
-                    // Obtener el servicio para usar sus valores predeterminados
-                    var servicio = await _servicioRepo.GetByIdAsync(servicioId);
-                    if (servicio != null)
-                    {
-                        // Usar los valores del servicio (precio base y cantidad predeterminada 1)
-                        await AddServicioToReservaAsync(correo, creada.Id, servicioId, 1, null);
-                    }
-                    else
-                    {
-                        _logger.LogWarning("Servicio no encontrado con ID: {ServicioId}", servicioId);
-                    }
+                    await AddServicioToReservaAsync(correo, creada.Id, servicioId);
                 }
             }
             
@@ -178,7 +168,7 @@ namespace back_end.Modules.reservas.Services
             return await _reservaRepo.DeleteAsync(reserva);
         }
         
-        public async Task<bool> AddServicioToReservaAsync(string correo, Guid reservaId, Guid servicioId, int cantidad, decimal? precio)
+        public async Task<bool> AddServicioToReservaAsync(string correo, Guid reservaId, Guid servicioId)
         {
             // Verificar que la reserva pertenezca al usuario
             var reserva = await _reservaRepo.GetByIdAndCorreoAsync(reservaId, correo);
@@ -192,20 +182,18 @@ namespace back_end.Modules.reservas.Services
             var existingServicio = reserva.ReservaServicios.FirstOrDefault(rs => rs.ServicioId == servicioId);
             if (existingServicio != null)
             {
-                // Actualizar la cantidad
-                existingServicio.CantidadItems = cantidad;
-                existingServicio.Precio = precio ?? servicio.PrecioBase;
-                await _reservaRepo.UpdateReservaServicioAsync(existingServicio);
+                // Si ya existe, no hacemos nada y retornamos éxito
+                return true;
             }
             else
             {
-                // Crear nueva relación
+                // Crear nueva relación usando el precio del servicio y cantidad 1
                 var reservaServicio = new ReservaServicio
                 {
                     ReservaId = reservaId,
                     ServicioId = servicioId,
-                    CantidadItems = cantidad,
-                    Precio = precio ?? servicio.PrecioBase
+                    CantidadItems = 1, // Por defecto es 1
+                    Precio = servicio.PrecioBase // Usamos el precio del servicio directamente
                 };
                 
                 await _reservaRepo.AddReservaServicioAsync(reservaServicio);

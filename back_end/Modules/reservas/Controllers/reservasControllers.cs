@@ -192,5 +192,35 @@ namespace back_end.Modules.reservas.Controllers
                 return StatusCode(500, new { message = "Error al eliminar servicio de la reserva" });
             }
         }
+
+        [Authorize]
+        [HttpPost("{correo}/{reservaId:guid}/servicios/{servicioId:guid}")]
+        public async Task<IActionResult> AddServicio(string correo, Guid reservaId, Guid servicioId)
+        {
+            try
+            {
+                _logger.LogInformation("Agregando servicio {ServicioId} a la reserva {ReservaId}", servicioId, reservaId);
+                
+                var resultado = await _service.AddServicioToReservaAsync(correo, reservaId, servicioId);
+                
+                if (!resultado)
+                {
+                    return NotFound(new { message = "Reserva o servicio no encontrado" });
+                }
+                
+                // Obtener la reserva actualizada para devolverla en la respuesta
+                var reservaActualizada = await _service.GetByIdAsync(correo, reservaId);
+                
+                return Ok(new { 
+                    message = "Servicio agregado correctamente a la reserva",
+                    reserva = reservaActualizada
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al agregar servicio {ServicioId} a la reserva {ReservaId}", servicioId, reservaId);
+                return StatusCode(500, new { message = "Error al agregar servicio a la reserva" });
+            }
+        }
     }
 }
