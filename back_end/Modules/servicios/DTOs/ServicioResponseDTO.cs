@@ -14,7 +14,7 @@ namespace back_end.Modules.servicios.DTOs
         // Colección de items asociados al servicio
         public List<ServicioItemDTO> Items { get; set; } = new List<ServicioItemDTO>();
         
-        // Cantidad total de items asignados al servicio (para visualización rápida)
-        public int TotalItems => Items.Sum(i => i.Cantidad ?? 0);
+        // Cantidad total de items distintos asignados al servicio (número de registros, no suma de cantidades)
+        public int TotalItems => Items.Count;
     }
 }

@@ -257,7 +257,9 @@ namespace back_end.Modules.servicios.Controllers
         {
             try
             {
-                _logger.LogInformation("Eliminando item con ID: {ItemId} del servicio con ID: {ServicioId}", itemId, servicioId);
+                _logger.LogInformation("Eliminando ítem con ID: {ItemId} del servicio con ID: {ServicioId}", 
+                    itemId, servicioId);
+                    
                 var eliminado = await _service.RemoveItemFromServicioAsync(correo, servicioId, itemId);
                 
                 if (!eliminado)
@@ -269,8 +271,8 @@ namespace back_end.Modules.servicios.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar item con ID: {ItemId} del servicio con ID: {ServicioId}", itemId, servicioId);
-                return StatusCode(500, new { message = "Error al eliminar item del servicio" });
+                _logger.LogError(ex, "Error al eliminar ítem con ID: {ItemId} del servicio con ID: {ServicioId}", itemId, servicioId);
+                return StatusCode(500, new { message = "Error al eliminar ítem del servicio" });
             }
         }
     }

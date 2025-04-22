@@ -19,7 +19,8 @@ namespace back_end.Modules.servicios.Services
         Task<ServicioItemDTO?> AddItemToServicioAsync(string correo, Guid servicioId, ServicioItemCreateDTO dto);
         Task<List<ServicioItemDTO>> AddMultipleItemsToServicioAsync(string correo, Guid servicioId, List<ServicioItemCreateDTO> dtos);
         Task<ServicioItemDTO?> UpdateServicioItemAsync(string correo, Guid servicioId, Guid itemId, ServicioItemUpdateDTO dto);
-        Task<bool> RemoveItemFromServicioAsync(string correo, Guid servicioId, Guid itemId);
+        Task<bool> RemoveItemFromServicioAsync(string correo, Guid servicioId, Guid itemId, int? cantidad = null);
+        Task<List<bool>> RemoveMultipleItemsFromServicioAsync(string correo, Guid servicioId, List<Guid> itemIds);
         Task<List<ServicioItemDTO>> GetServicioItemsAsync(string correo, Guid servicioId);
     }
 
@@ -95,14 +96,32 @@ namespace back_end.Modules.servicios.Services
                     var inventario = await _inventarioRepository.GetByIdAsync(itemDto.InventarioId);
                     if (inventario != null && inventario.UsuarioId == usuario.Id)
                     {
+                        // Verificar si hay stock suficiente
+                        int cantidadRequerida = itemDto.Cantidad ?? 1;
+                        if (inventario.Stock < cantidadRequerida)
+                        {
+                            _logger.LogWarning("Stock insuficiente para el item de inventario: {InventarioId}. Stock actual: {Stock}, Requerido: {Requerido}",
+                                itemDto.InventarioId, inventario.Stock, cantidadRequerida);
+                            continue; // Saltar este ítem si no hay stock suficiente
+                        }
+
                         var servicioItem = new ServicioItem
                         {
                             ServicioId = creado.Id,
                             InventarioId = itemDto.InventarioId,
-                            Cantidad = itemDto.Cantidad
+                            Cantidad = cantidadRequerida
                         };
                         
-                        await _repository.AddServicioItemAsync(servicioItem);
+                        var itemCreado = await _repository.AddServicioItemAsync(servicioItem);
+                        
+                        // Actualizar el stock del inventario si se agregó el ítem correctamente
+                        if (itemCreado != null)
+                        {
+                            inventario.Stock -= cantidadRequerida;
+                            await _inventarioRepository.UpdateAsync(inventario);
+                            _logger.LogInformation("Stock reducido al crear servicio: {InventarioId}, Cantidad: {Cantidad}", 
+                                itemDto.InventarioId, cantidadRequerida);
+                        }
                     }
                     else
                     {
@@ -203,6 +222,23 @@ namespace back_end.Modules.servicios.Services
                 return false;
             }
 
+            // Devolver el stock de los ítems al inventario antes de eliminar el servicio
+            foreach (var item in servicio.ServicioItems)
+            {
+                if (item.Cantidad.HasValue && item.Cantidad.Value > 0)
+                {
+                    var inventario = await _inventarioRepository.GetByIdAsync(item.InventarioId);
+                    if (inventario != null)
+                    {
+                        // Devolver el stock al inventario
+                        inventario.Stock += item.Cantidad.Value;
+                        await _inventarioRepository.UpdateAsync(inventario);
+                        _logger.LogInformation("Stock devuelto al inventario al eliminar servicio: {InventarioId}, Cantidad: {Cantidad}", 
+                            item.InventarioId, item.Cantidad.Value);
+                    }
+                }
+            }
+
             return await _repository.DeleteAsync(servicio);
         }
 
@@ -224,13 +260,42 @@ namespace back_end.Modules.servicios.Services
                 return null;
             }
             
+            // Verificar si hay stock suficiente
+            int cantidadRequerida = dto.Cantidad ?? 1;
+            if (inventario.Stock < cantidadRequerida)
+            {
+                _logger.LogWarning("Stock insuficiente para el item de inventario: {InventarioId}. Stock actual: {Stock}, Requerido: {Requerido}", 
+                    dto.InventarioId, inventario.Stock, cantidadRequerida);
+                return null;
+            }
+            
             // Verificar si ya existe un ServicioItem con el mismo InventarioId
             var existingItem = servicio.ServicioItems.FirstOrDefault(si => si.InventarioId == dto.InventarioId);
             if (existingItem != null)
             {
+                // Calcular la diferencia de cantidades para ajustar el stock
+                int cantidadAnterior = existingItem.Cantidad ?? 0;
+                int diferencia = cantidadRequerida - cantidadAnterior;
+                
+                // Verificar si tenemos suficiente stock para el incremento
+                if (diferencia > 0 && inventario.Stock < diferencia)
+                {
+                    _logger.LogWarning("Stock insuficiente para aumentar la cantidad. Stock actual: {Stock}, Incremento: {Incremento}", 
+                        inventario.Stock, diferencia);
+                    return null;
+                }
+                
                 // Actualizar la cantidad del item existente
-                existingItem.Cantidad = dto.Cantidad;
+                existingItem.Cantidad = cantidadRequerida;
                 var updated = await _repository.UpdateServicioItemAsync(existingItem);
+                
+                // Actualizar el stock del inventario
+                if (diferencia != 0)
+                {
+                    inventario.Stock -= diferencia;  // Restar si es positivo, sumar si es negativo
+                    await _inventarioRepository.UpdateAsync(inventario);
+                }
+                
                 return updated == null ? null : MapToItemDTO(updated);
             }
             
@@ -239,10 +304,18 @@ namespace back_end.Modules.servicios.Services
             {
                 ServicioId = servicioId,
                 InventarioId = dto.InventarioId,
-                Cantidad = dto.Cantidad
+                Cantidad = cantidadRequerida
             };
             
             var created = await _repository.AddServicioItemAsync(nuevoItem);
+            
+            // Actualizar el stock del inventario
+            if (created != null)
+            {
+                inventario.Stock -= cantidadRequerida;
+                await _inventarioRepository.UpdateAsync(inventario);
+            }
+            
             return created == null ? null : MapToItemDTO(created);
         }
 
@@ -268,13 +341,42 @@ namespace back_end.Modules.servicios.Services
                     continue;
                 }
                 
+                // Verificar si hay stock suficiente
+                int cantidadRequerida = dto.Cantidad ?? 1;
+                if (inventario.Stock < cantidadRequerida)
+                {
+                    _logger.LogWarning("Stock insuficiente para el item de inventario: {InventarioId}. Stock actual: {Stock}, Requerido: {Requerido}", 
+                        dto.InventarioId, inventario.Stock, cantidadRequerida);
+                    continue;
+                }
+                
                 // Verificar si ya existe un ServicioItem con el mismo InventarioId
                 var existingItem = servicio.ServicioItems.FirstOrDefault(si => si.InventarioId == dto.InventarioId);
                 if (existingItem != null)
                 {
+                    // Calcular la diferencia de cantidades para ajustar el stock
+                    int cantidadAnterior = existingItem.Cantidad ?? 0;
+                    int diferencia = cantidadRequerida - cantidadAnterior;
+                    
+                    // Verificar si tenemos suficiente stock para el incremento
+                    if (diferencia > 0 && inventario.Stock < diferencia)
+                    {
+                        _logger.LogWarning("Stock insuficiente para aumentar la cantidad. Stock actual: {Stock}, Incremento: {Incremento}", 
+                            inventario.Stock, diferencia);
+                        continue;
+                    }
+                    
                     // Actualizar la cantidad del item existente
-                    existingItem.Cantidad = dto.Cantidad;
+                    existingItem.Cantidad = cantidadRequerida;
                     var updated = await _repository.UpdateServicioItemAsync(existingItem);
+                    
+                    // Actualizar el stock del inventario
+                    if (diferencia != 0)
+                    {
+                        inventario.Stock -= diferencia;
+                        await _inventarioRepository.UpdateAsync(inventario);
+                    }
+                    
                     if (updated != null)
                     {
                         resultItems.Add(MapToItemDTO(updated));
@@ -287,12 +389,16 @@ namespace back_end.Modules.servicios.Services
                     {
                         ServicioId = servicioId,
                         InventarioId = dto.InventarioId,
-                        Cantidad = dto.Cantidad
+                        Cantidad = cantidadRequerida
                     };
                     
                     var created = await _repository.AddServicioItemAsync(nuevoItem);
                     if (created != null)
                     {
+                        // Actualizar el stock del inventario
+                        inventario.Stock -= cantidadRequerida;
+                        await _inventarioRepository.UpdateAsync(inventario);
+                        
                         resultItems.Add(MapToItemDTO(created));
                     }
                 }
@@ -319,17 +425,45 @@ namespace back_end.Modules.servicios.Services
                 return null;
             }
             
-            // Actualizar la cantidad
+            // Obtener el inventario para verificar el stock y actualizarlo
+            var inventario = await _inventarioRepository.GetByIdAsync(item.InventarioId);
+            if (inventario == null)
+            {
+                _logger.LogWarning("Inventario no encontrado para el item: {ItemId}", itemId);
+                return null;
+            }
+            
+            // Actualizar la cantidad sólo si se proporciona un nuevo valor
             if (dto.Cantidad.HasValue)
             {
-                item.Cantidad = dto.Cantidad;
+                int cantidadAnterior = item.Cantidad ?? 0;
+                int cantidadNueva = dto.Cantidad.Value;
+                int diferencia = cantidadNueva - cantidadAnterior;
+                
+                // Si estamos incrementando, verificar que hay stock suficiente
+                if (diferencia > 0 && inventario.Stock < diferencia)
+                {
+                    _logger.LogWarning("Stock insuficiente para aumentar la cantidad. Stock actual: {Stock}, Incremento necesario: {Incremento}", 
+                        inventario.Stock, diferencia);
+                    return null;
+                }
+                
+                // Actualizar cantidad en el item del servicio
+                item.Cantidad = cantidadNueva;
+                
+                // Actualizar el stock del inventario
+                if (diferencia != 0) // Solo actualizar si hay cambio real
+                {
+                    inventario.Stock -= diferencia; // Resta si es positivo (más productos usados), suma si es negativo (productos liberados)
+                    await _inventarioRepository.UpdateAsync(inventario);
+                }
             }
             
             var updated = await _repository.UpdateServicioItemAsync(item);
             return updated == null ? null : MapToItemDTO(updated);
         }
 
-        public async Task<bool> RemoveItemFromServicioAsync(string correo, Guid servicioId, Guid itemId)
+        public async Task<bool> RemoveItemFromServicioAsync(string correo, Guid servicioId, Guid itemId, int? cantidad = null)
         {
             // Verificar que el servicio exista y pertenezca al usuario
             var servicio = await _repository.GetByIdAndCorreoAsync(servicioId, correo);
@@ -347,7 +481,89 @@ namespace back_end.Modules.servicios.Services
                 return false;
             }
             
+            // Obtener el inventario para devolverle el stock
+            var inventario = await _inventarioRepository.GetByIdAsync(item.InventarioId);
+            if (inventario == null)
+            {
+                _logger.LogWarning("Inventario no encontrado para el item: {ItemId}", itemId);
+                return false;
+            }
+
+            if (!item.Cantidad.HasValue || item.Cantidad.Value <= 0)
+            {
+                _logger.LogWarning("El ítem no tiene una cantidad válida: {ItemId}", itemId);
+                return false;
+            }
+            
+            // Devolver el stock completo al inventario
+            int cantidadADevolver = item.Cantidad.Value;
+            inventario.Stock += cantidadADevolver;
+            await _inventarioRepository.UpdateAsync(inventario);
+            _logger.LogInformation("Stock devuelto al inventario: {InventarioId}, Cantidad: {Cantidad}", 
+                item.InventarioId, cantidadADevolver);
+            
+            // Eliminar el ítem completamente
             return await _repository.RemoveServicioItemAsync(item);
+        }
+
+        public async Task<List<bool>> RemoveMultipleItemsFromServicioAsync(string correo, Guid servicioId, List<Guid> itemIds)
+        {
+            // Verificar que el servicio exista y pertenezca al usuario
+            var servicio = await _repository.GetByIdAndCorreoAsync(servicioId, correo);
+            if (servicio == null)
+            {
+                _logger.LogWarning("Servicio no encontrado con ID: {Id} para correo: {Correo}", servicioId, correo);
+                return itemIds.Select(_ => false).ToList(); // Devolver una lista de falsos del mismo tamaño que la entrada
+            }
+            
+            var resultados = new List<bool>();
+            var itemsToRemove = new List<ServicioItem>();
+            
+            foreach (var itemId in itemIds)
+            {
+                // Verificar que el item exista y pertenezca al servicio
+                var item = await _repository.GetServicioItemByIdAsync(itemId);
+                if (item == null || item.ServicioId != servicioId)
+                {
+                    _logger.LogWarning("Item no encontrado en el servicio: {ItemId}", itemId);
+                    resultados.Add(false);
+                    continue;
+                }
+                
+                // Obtener el inventario para devolverle el stock
+                var inventario = await _inventarioRepository.GetByIdAsync(item.InventarioId);
+                if (inventario == null)
+                {
+                    _logger.LogWarning("Inventario no encontrado para el item: {ItemId}", itemId);
+                    resultados.Add(false);
+                    continue;
+                }
+
+                if (!item.Cantidad.HasValue || item.Cantidad.Value <= 0)
+                {
+                    _logger.LogWarning("El ítem no tiene una cantidad válida: {ItemId}", itemId);
+                    resultados.Add(false);
+                    continue;
+                }
+                
+                // Devolver el stock al inventario
+                int cantidadADevolver = item.Cantidad.Value;
+                inventario.Stock += cantidadADevolver;
+                await _inventarioRepository.UpdateAsync(inventario);
+                _logger.LogInformation("Stock devuelto al inventario: {InventarioId}, Cantidad: {Cantidad}", 
+                    item.InventarioId, cantidadADevolver);
+                
+                itemsToRemove.Add(item);
+                resultados.Add(true);
+            }
+            
+            // Eliminar todos los items en una sola operación si hay alguno para eliminar
+            if (itemsToRemove.Any())
+            {
+                await _repository.RemoveMultipleServicioItemsAsync(itemsToRemove);
+            }
+            
+            return resultados;
         }
 
         public async Task<List<ServicioItemDTO>> GetServicioItemsAsync(string correo, Guid servicioId)
@@ -388,7 +604,8 @@ namespace back_end.Modules.servicios.Services
                 InventarioId = item.InventarioId,
                 Cantidad = item.Cantidad,
                 NombreItem = item.Inventario?.Nombre,
-                CategoriaItem = item.Inventario?.Categoria
+                CategoriaItem = item.Inventario?.Categoria,
+                StockActual = item.Inventario?.Stock // Incluir el stock actual del inventario
             };
         }
     }

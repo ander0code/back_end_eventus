@@ -79,19 +79,17 @@ namespace back_end.Modules.dashboard.Controllers
             {
                 _logger.LogInformation("Solicitando información completa del dashboard para usuario: {Correo}", correo);
                 
-                // Obtener todas las métricas en paralelo para mejor rendimiento
-                var metricasTask = _service.GetMetricsAsync(correo);
-                var proximasReservasTask = _service.GetProximasReservasAsync(correo, 3); // 3 próximas reservas
-                var actividadRecienteTask = _service.GetActividadRecienteAsync(correo, 10); // 10 actividades recientes
-                
-                await Task.WhenAll(metricasTask, proximasReservasTask, actividadRecienteTask);
+                // Ejecutar las consultas secuencialmente para evitar problemas de concurrencia con DbContext
+                var metricas = await _service.GetMetricsAsync(correo);
+                var proximasReservas = await _service.GetProximasReservasAsync(correo, 3); // 3 próximas reservas
+                var actividadReciente = await _service.GetActividadRecienteAsync(correo, 10); // 10 actividades recientes
                 
                 // Consolidar todos los datos en una respuesta
                 var dashboardData = new 
                 {
-                    Metricas = metricasTask.Result,
-                    ProximasReservas = proximasReservasTask.Result,
-                    ActividadReciente = actividadRecienteTask.Result
+                    Metricas = metricas,
+                    ProximasReservas = proximasReservas,
+                    ActividadReciente = actividadReciente
                 };
                 
                 return Ok(dashboardData);
