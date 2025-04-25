@@ -207,36 +207,5 @@ namespace back_end.Modules.inventario.Controllers
                 return StatusCode(500, new { message = "Error al eliminar item", error = ex.Message });
             }
         }
-
-        [HttpPut("{correo}/{id:guid}/stock")]
-        public async Task<IActionResult> ActualizarStock(string correo, Guid id, [FromBody] Guid servicioId)
-        {
-            try
-            {
-                _logger.LogInformation("Eliminando servicio {ServicioId} de la reserva {ReservaId} para usuario con correo: {Correo}", servicioId, id, correo);
-                
-                // Redireccionar al controlador de reservas para eliminar el servicio de la reserva
-                // En lugar de actualizar el stock, ahora este endpoint eliminará un servicio de una reserva
-                var reservasController = HttpContext.RequestServices.GetService<back_end.Modules.reservas.Controllers.ReservaController>();
-                if (reservasController == null)
-                {
-                    return StatusCode(500, new { message = "Error interno del servidor al procesar la solicitud" });
-                }
-                
-                // Configurar el contexto para el controlador de reservas
-                reservasController.ControllerContext = new ControllerContext
-                {
-                    HttpContext = HttpContext
-                };
-                
-                // Llamar al método RemoveServicio del controlador de reservas
-                return await reservasController.RemoveServicio(correo, id, servicioId);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al eliminar servicio {ServicioId} de la reserva {ReservaId} para usuario con correo: {Correo}", servicioId, id, correo);
-                return StatusCode(500, new { message = "Error al eliminar servicio de la reserva", error = ex.Message });
-            }
-        }
     }
 }

@@ -119,24 +119,58 @@ namespace back_end.Modules.reservas.Controllers
 
         [Authorize]
         [HttpPut("{correo}/{id:guid}")]
+        [Consumes("application/json")]
+        [Produces("application/json")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
         public async Task<IActionResult> Update(string correo, Guid id, [FromBody] ReservaUpdateDTO dto)
         {
             try
             {
                 _logger.LogInformation("Solicitud para actualizar reserva con ID: {Id} del usuario con correo: {Correo}", id, correo);
+                
+                // Validar operaciones de agregar/remover servicios
+                if (dto.ItemsToAdd != null && dto.ItemsToAdd.Any())
+                {
+                    _logger.LogInformation("Se agregarán {Count} servicios a la reserva {Id}", dto.ItemsToAdd.Count, id);
+                    
+                    // Validar que no haya IDs de servicio inválidos (por ejemplo, Guid vacío)
+                    if (dto.ItemsToAdd.Any(item => item.ServicioId == Guid.Empty))
+                    {
+                        return BadRequest(new { message = "Hay IDs de servicio inválidos en la lista de servicios a agregar" });
+                    }
+                }
+                
+                if (dto.ItemsToRemove != null && dto.ItemsToRemove.Any())
+                {
+                    _logger.LogInformation("Se eliminarán {Count} servicios de la reserva {Id}", dto.ItemsToRemove.Count, id);
+                    
+                    // Validar que no haya IDs de servicio inválidos (por ejemplo, Guid vacío)
+                    if (dto.ItemsToRemove.Any(servicioId => servicioId == Guid.Empty))
+                    {
+                        return BadRequest(new { message = "Hay IDs de servicio inválidos en la lista de servicios a eliminar" });
+                    }
+                }
+                
                 var actualizada = await _service.UpdateAsync(correo, id, dto);
+                
                 if (actualizada == null)
                 {
                     _logger.LogWarning("Reserva no encontrada con ID: {Id} para el usuario con correo: {Correo}", id, correo);
                     return NotFound(new { message = "Reserva no encontrada" });
                 }
 
-                return Ok(actualizada);
+                return Ok(new {
+                    message = "Reserva actualizada correctamente",
+                    reserva = actualizada
+                });
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al actualizar reserva con ID: {Id} del usuario con correo: {Correo}", id, correo);
-                return StatusCode(500, new { message = "Error al actualizar reserva" });
+                return StatusCode(500, new { message = "Error al actualizar reserva: " + ex.Message });
             }
         }
 
@@ -160,66 +194,6 @@ namespace back_end.Modules.reservas.Controllers
             {
                 _logger.LogError(ex, "Error al eliminar reserva con ID: {Id} del usuario con correo: {Correo}", id, correo);
                 return StatusCode(500, new { message = "Error al eliminar reserva" });
-            }
-        }
-
-        [Authorize]
-        [HttpDelete("{correo}/{reservaId:guid}/servicios/{servicioId:guid}")]
-        public async Task<IActionResult> RemoveServicio(string correo, Guid reservaId, Guid servicioId)
-        {
-            try
-            {
-                _logger.LogInformation("Eliminando servicio {ServicioId} de la reserva {ReservaId}", servicioId, reservaId);
-                
-                var resultado = await _service.RemoveServicioFromReservaAsync(correo, reservaId, servicioId);
-                
-                if (!resultado)
-                {
-                    return NotFound(new { message = "Reserva o servicio no encontrado" });
-                }
-                
-                // Obtener la reserva actualizada para devolverla en la respuesta
-                var reservaActualizada = await _service.GetByIdAsync(correo, reservaId);
-                
-                return Ok(new { 
-                    message = "Servicio eliminado correctamente de la reserva",
-                    reserva = reservaActualizada
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al eliminar servicio {ServicioId} de la reserva {ReservaId}", servicioId, reservaId);
-                return StatusCode(500, new { message = "Error al eliminar servicio de la reserva" });
-            }
-        }
-
-        [Authorize]
-        [HttpPost("{correo}/{reservaId:guid}/servicios/{servicioId:guid}")]
-        public async Task<IActionResult> AddServicio(string correo, Guid reservaId, Guid servicioId)
-        {
-            try
-            {
-                _logger.LogInformation("Agregando servicio {ServicioId} a la reserva {ReservaId}", servicioId, reservaId);
-                
-                var resultado = await _service.AddServicioToReservaAsync(correo, reservaId, servicioId);
-                
-                if (!resultado)
-                {
-                    return NotFound(new { message = "Reserva o servicio no encontrado" });
-                }
-                
-                // Obtener la reserva actualizada para devolverla en la respuesta
-                var reservaActualizada = await _service.GetByIdAsync(correo, reservaId);
-                
-                return Ok(new { 
-                    message = "Servicio agregado correctamente a la reserva",
-                    reserva = reservaActualizada
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al agregar servicio {ServicioId} a la reserva {ReservaId}", servicioId, reservaId);
-                return StatusCode(500, new { message = "Error al agregar servicio a la reserva" });
             }
         }
     }
