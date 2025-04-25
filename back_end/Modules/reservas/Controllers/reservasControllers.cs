@@ -67,13 +67,12 @@ namespace back_end.Modules.reservas.Controllers
             {
                 _logger.LogInformation("Solicitud para crear reserva del usuario con correo: {Correo}", correo);
                 
-                // Validación de datos mínimos requeridos
                 if (string.IsNullOrWhiteSpace(dto.NombreEvento))
                 {
                     return BadRequest(new { message = "El nombre del evento es obligatorio" });
                 }
                 
-                // Validar cliente - debe proporcionar un ClienteId existente o datos para crear uno nuevo
+
                 if (!dto.ClienteId.HasValue && 
                     (string.IsNullOrWhiteSpace(dto.NombreCliente) || string.IsNullOrWhiteSpace(dto.CorreoCliente)))
                 {
@@ -82,7 +81,6 @@ namespace back_end.Modules.reservas.Controllers
                     });
                 }
                 
-                // Validar que se proporcionen servicios
                 if (dto.Servicios == null || !dto.Servicios.Any())
                 {
                     return BadRequest(new { message = "Debe proporcionar al menos un servicio para la reserva" });
@@ -98,8 +96,7 @@ namespace back_end.Modules.reservas.Controllers
                     }
                     return StatusCode(500, new { message = "Error al crear la reserva o el cliente" });
                 }
-                
-                // Determinar si se creó un cliente nuevo o se usó uno existente
+
                 string clienteInfo = dto.ClienteId.HasValue 
                     ? $"Cliente existente con ID: {dto.ClienteId}"
                     : $"Nuevo cliente creado: {dto.NombreCliente}";
@@ -131,12 +128,10 @@ namespace back_end.Modules.reservas.Controllers
             {
                 _logger.LogInformation("Solicitud para actualizar reserva con ID: {Id} del usuario con correo: {Correo}", id, correo);
                 
-                // Validar operaciones de agregar/remover servicios
                 if (dto.ItemsToAdd != null && dto.ItemsToAdd.Any())
                 {
                     _logger.LogInformation("Se agregarán {Count} servicios a la reserva {Id}", dto.ItemsToAdd.Count, id);
-                    
-                    // Validar que no haya IDs de servicio inválidos (por ejemplo, Guid vacío)
+
                     if (dto.ItemsToAdd.Any(item => item.ServicioId == Guid.Empty))
                     {
                         return BadRequest(new { message = "Hay IDs de servicio inválidos en la lista de servicios a agregar" });
@@ -146,8 +141,7 @@ namespace back_end.Modules.reservas.Controllers
                 if (dto.ItemsToRemove != null && dto.ItemsToRemove.Any())
                 {
                     _logger.LogInformation("Se eliminarán {Count} servicios de la reserva {Id}", dto.ItemsToRemove.Count, id);
-                    
-                    // Validar que no haya IDs de servicio inválidos (por ejemplo, Guid vacío)
+
                     if (dto.ItemsToRemove.Any(servicioId => servicioId == Guid.Empty))
                     {
                         return BadRequest(new { message = "Hay IDs de servicio inválidos en la lista de servicios a eliminar" });

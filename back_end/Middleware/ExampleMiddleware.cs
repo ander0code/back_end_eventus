@@ -15,15 +15,13 @@ namespace back_end.Middleware
         {
             _logger.LogInformation($"Request received: {context.Request.Path}");
             
-            // Puedes realizar operaciones antes de pasar la solicitud al siguiente middleware
             
             await _next(context);
-            
-            // Puedes realizar operaciones después de que el siguiente middleware haya procesado la solicitud
+
         }
     }
 
-    // Método de extensión para facilitar el registro del middleware
+
     public static class ExampleMiddlewareExtensions
     {
         public static IApplicationBuilder UseExampleMiddleware(this IApplicationBuilder builder)

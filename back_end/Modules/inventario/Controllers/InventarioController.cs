@@ -7,7 +7,7 @@ namespace back_end.Modules.inventario.Controllers
 {
     [ApiController]
     [Route("api/inventario")]
-    [Authorize] // Proteger todos los endpoints por defecto
+    [Authorize] 
     public class InventarioController : ControllerBase
     {
         private readonly IInventarioService _service;

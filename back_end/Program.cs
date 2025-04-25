@@ -44,7 +44,7 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader());
 });
 
-// Add DbContext configuration usando AppSettings
+
 builder.Services.AddDbContext<DbEventusContext>((serviceProvider, options) => {
     var appSettings = serviceProvider.GetRequiredService<AppSettings>();
     options.UseSqlServer(appSettings.DatabaseConnection);
@@ -53,7 +53,7 @@ builder.Services.AddDbContext<DbEventusContext>((serviceProvider, options) => {
 // Agregar configuración JWT usando AppSettings
 builder.Services.AddJwtConfiguration(builder.Configuration);
 
-// Register services for each module
+
 // Auth Module
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();

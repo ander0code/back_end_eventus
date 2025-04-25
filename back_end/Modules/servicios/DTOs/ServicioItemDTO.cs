@@ -5,9 +5,9 @@ namespace back_end.Modules.servicios.DTOs
         public Guid Id { get; set; }
         public Guid InventarioId { get; set; }
         public int? Cantidad { get; set; }
-        public string? NombreItem { get; set; }  // Para mostrar información del inventario
+        public string? NombreItem { get; set; }  
         public string? CategoriaItem { get; set; }
-        public int? StockActual { get; set; }  // Stock actual del inventario después de asignar a este servicio
+        public int? StockActual { get; set; }  
     }
 
     public class ServicioItemCreateDTO

@@ -23,13 +23,12 @@ namespace back_end.Modules.Auth.Repositories
 
         public UsuarioAuthDTO? GetUserByEmail(string email)
         {
-            // Adaptamos la lógica para usar la entidad Usuario de nuestro modelo
+
             var usuario = _context.Usuarios.FirstOrDefault(u => u.CorreoElectronico == email);
             
             if (usuario == null)
                 return null;
-                
-            // Mapeamos de Usuario a UsuarioAuthDTO
+
             return new UsuarioAuthDTO
             {
                 Id = usuario.Id,
@@ -43,7 +42,7 @@ namespace back_end.Modules.Auth.Repositories
 
         public async Task<UsuarioAuthDTO> RegisterUser(RegisterRequestDTO request)
         {
-            // Crear un nuevo usuario
+
             var usuario = new Usuario
             {
                 Nombre = request.Nombre,
@@ -56,11 +55,9 @@ namespace back_end.Modules.Auth.Repositories
                 FechaRegistro = DateTime.Now
             };
 
-            // Guardar en la base de datos
             _context.Usuarios.Add(usuario);
             await _context.SaveChangesAsync();
 
-            // Retornar el DTO del usuario
             return new UsuarioAuthDTO
             {
                 Id = usuario.Id,
@@ -79,14 +76,13 @@ namespace back_end.Modules.Auth.Repositories
 
         private string HashPassword(string password)
         {
-            // Usar BCrypt para generar un hash seguro
-            // WorkFactor 12 es un buen equilibrio entre seguridad y rendimiento
+
             return BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
         }
 
         private string GenerateVerificationToken()
         {
-            // Generar un token aleatorio para verificación de email
+
             return Guid.NewGuid().ToString();
         }
     }

@@ -12,7 +12,6 @@ namespace back_end.Modules.reservas.Repositories
         Task<Reserva> UpdateAsync(Reserva reserva);
         Task<bool> DeleteAsync(Reserva reserva);
         
-        // Métodos para gestionar ReservaServicio
         Task<ReservaServicio?> AddReservaServicioAsync(ReservaServicio reservaServicio);
         Task<ReservaServicio?> UpdateReservaServicioAsync(ReservaServicio reservaServicio);
         Task<bool> RemoveReservaServicioAsync(ReservaServicio reservaServicio);
@@ -68,8 +67,7 @@ namespace back_end.Modules.reservas.Repositories
             _context.Reservas.Remove(reserva);
             return await _context.SaveChangesAsync() > 0;
         }
-        
-        // Implementación de métodos para gestionar ReservaServicio
+
         
         public async Task<ReservaServicio?> AddReservaServicioAsync(ReservaServicio reservaServicio)
         {

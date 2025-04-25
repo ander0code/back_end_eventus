@@ -72,22 +72,21 @@ namespace back_end.Modules.servicios.Services
                 return null;
             }
 
-            // Si hay items en la DTO, agregarlos al servicio
             if (dto.Items != null && dto.Items.Any())
             {
                 foreach (var itemDto in dto.Items)
                 {
-                    // Verificar que el item de inventario exista y pertenezca al usuario
+
                     var inventario = await _inventarioRepository.GetByIdAsync(itemDto.InventarioId);
                     if (inventario != null && inventario.UsuarioId == usuario.Id)
                     {
-                        // Verificar si hay stock suficiente
+
                         int cantidadRequerida = itemDto.Cantidad ?? 1;
                         if (inventario.Stock < cantidadRequerida)
                         {
                             _logger.LogWarning("Stock insuficiente para el item de inventario: {InventarioId}. Stock actual: {Stock}, Requerido: {Requerido}",
                                 itemDto.InventarioId, inventario.Stock, cantidadRequerida);
-                            continue; // Saltar este ítem si no hay stock suficiente
+                            continue; 
                         }
 
                         var servicioItem = new ServicioItem
@@ -99,7 +98,6 @@ namespace back_end.Modules.servicios.Services
                         
                         var itemCreado = await _repository.AddServicioItemAsync(servicioItem);
                         
-                        // Actualizar el stock del inventario si se agregó el ítem correctamente
                         if (itemCreado != null)
                         {
                             inventario.Stock -= cantidadRequerida;
@@ -115,7 +113,6 @@ namespace back_end.Modules.servicios.Services
                 }
             }
 
-            // Recargar el servicio con sus items
             var servicioConItems = await _repository.GetByIdAsync(creado.Id);
             return servicioConItems == null ? null : MapToDTO(servicioConItems);
         }
@@ -129,7 +126,6 @@ namespace back_end.Modules.servicios.Services
                 return null;
             }
 
-            // Actualiza solo si no es null
             if (dto.NombreServicio != null) existente.Nombre = dto.NombreServicio;
             if (dto.Descripcion != null) existente.Descripcion = dto.Descripcion;
             if (dto.PrecioBase != null) existente.PrecioBase = dto.PrecioBase;
@@ -143,27 +139,25 @@ namespace back_end.Modules.servicios.Services
                 return null;
             }
 
-            // Manejar los items que se deben agregar o actualizar
             if (dto.ItemsToAdd != null && dto.ItemsToAdd.Any())
             {
                 foreach (var itemDto in dto.ItemsToAdd)
                 {
-                    // Verificar si el item ya existe en el servicio
+
                     var existingItem = existente.ServicioItems.FirstOrDefault(si => si.InventarioId == itemDto.InventarioId);
                     
                     if (existingItem != null)
                     {
-                        // Actualizar cantidad del item existente
+
                         existingItem.Cantidad = itemDto.Cantidad;
                         await _repository.UpdateServicioItemAsync(existingItem);
                     }
                     else
                     {
-                        // Verificar que el inventario exista y pertenezca al usuario
+
                         var inventario = await _inventarioRepository.GetByIdAsync(itemDto.InventarioId);
                         if (inventario != null && inventario.Usuario.CorreoElectronico == correo)
                         {
-                            // Agregar nuevo item
                             var nuevoItem = new ServicioItem
                             {
                                 ServicioId = existente.Id,
@@ -180,7 +174,6 @@ namespace back_end.Modules.servicios.Services
                 }
             }
 
-            // Eliminar items si se solicita
             if (dto.ItemsToRemove != null && dto.ItemsToRemove.Any())
             {
                 foreach (var itemId in dto.ItemsToRemove)
@@ -193,7 +186,6 @@ namespace back_end.Modules.servicios.Services
                 }
             }
 
-            // Recargar el servicio con sus items actualizados
             var servicioActualizado = await _repository.GetByIdAsync(id);
             return servicioActualizado == null ? null : MapToDTO(servicioActualizado);
         }
@@ -207,7 +199,6 @@ namespace back_end.Modules.servicios.Services
                 return false;
             }
 
-            // Devolver el stock de los ítems al inventario antes de eliminar el servicio
             foreach (var item in servicio.ServicioItems)
             {
                 if (item.Cantidad.HasValue && item.Cantidad.Value > 0)
@@ -215,7 +206,7 @@ namespace back_end.Modules.servicios.Services
                     var inventario = await _inventarioRepository.GetByIdAsync(item.InventarioId);
                     if (inventario != null)
                     {
-                        // Devolver el stock al inventario
+
                         inventario.Stock += item.Cantidad.Value;
                         await _inventarioRepository.UpdateAsync(inventario);
                         _logger.LogInformation("Stock devuelto al inventario al eliminar servicio: {InventarioId}, Cantidad: {Cantidad}", 
@@ -237,7 +228,7 @@ namespace back_end.Modules.servicios.Services
                 PrecioBase = servicio.PrecioBase,
                 TipoEvento = servicio.Categoria,
                 Imagenes = servicio.Imagenes,
-                FechaCreacion = DateTime.UtcNow, // No está en el modelo, usamos fecha actual
+                FechaCreacion = DateTime.UtcNow, 
                 UsuarioId = servicio.UsuarioId,
                 Items = servicio.ServicioItems.Select(MapToItemDTO).ToList()
             };
@@ -252,7 +243,7 @@ namespace back_end.Modules.servicios.Services
                 Cantidad = item.Cantidad,
                 NombreItem = item.Inventario?.Nombre,
                 CategoriaItem = item.Inventario?.Categoria,
-                StockActual = item.Inventario?.Stock // Incluir el stock actual del inventario
+                StockActual = item.Inventario?.Stock ?? 0,
             };
         }
     }

@@ -20,15 +20,13 @@ namespace back_end.Core.Configurations
             {
                 options.SaveToken = true;
                 options.RequireHttpsMetadata = false;
-                
-                // Usar un ServiceProvider para obtener AppSettings al configurar las opciones
+
                 options.TokenValidationParameters = new TokenValidationParameters
                 {
                     ValidateIssuer = true,
                     ValidateAudience = true,
                     ValidateLifetime = true,
                     ValidateIssuerSigningKey = true,
-                    // Estos valores se obtendrán dinámicamente de AppSettings
                     ValidIssuer = configuration["Jwt:Issuer"],
                     ValidAudience = configuration["Jwt:Audience"],
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(

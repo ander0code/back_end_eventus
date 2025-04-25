@@ -20,7 +20,6 @@ namespace back_end.Modules.servicios.Controllers
             _logger = logger;
         }
 
-        // Obtener todos los servicios de un usuario
         [HttpGet("{correo}")]
         public async Task<IActionResult> GetByCorreo(string correo)
         {
@@ -37,7 +36,6 @@ namespace back_end.Modules.servicios.Controllers
             }
         }
         
-        // Obtener un servicio específico por ID
         [HttpGet("{correo}/{id:guid}")]
         public async Task<IActionResult> GetById(string correo, Guid id)
         {
@@ -61,7 +59,6 @@ namespace back_end.Modules.servicios.Controllers
             }
         }
 
-        // Crear un nuevo servicio
         [HttpPost("{correo}")]
         public async Task<IActionResult> Create(string correo, [FromBody] ServicioCreateDTO dto)
         {
@@ -69,7 +66,6 @@ namespace back_end.Modules.servicios.Controllers
             {
                 _logger.LogInformation("Solicitud para crear servicio del usuario con correo: {Correo}", correo);
                 
-                // Validación básica
                 if (string.IsNullOrWhiteSpace(dto.NombreServicio))
                 {
                     return BadRequest(new { message = "El nombre del servicio es requerido" });
@@ -91,7 +87,6 @@ namespace back_end.Modules.servicios.Controllers
             }
         }
 
-        // Actualizar un servicio existente
         [HttpPut("{correo}/{id:guid}")]
         public async Task<IActionResult> Update(string correo, Guid id, [FromBody] ServicioUpdateDTO dto)
         {
@@ -114,7 +109,6 @@ namespace back_end.Modules.servicios.Controllers
             }
         }
 
-        // Eliminar un servicio
         [HttpDelete("{correo}/{id:guid}")]
         public async Task<IActionResult> Delete(string correo, Guid id)
         {

@@ -23,7 +23,7 @@ namespace back_end.Modules.clientes.Controllers
         [HttpGet("usuario/{correo}")]
         public async Task<IActionResult> GetByUsuarioCorreo(string correo)
         {
-            var cliente = await _clienteService.GetByUsuarioCorreoAsync(correo); // Cambié a GetByUsuarioCorreoAsync
+            var cliente = await _clienteService.GetByUsuarioCorreoAsync(correo); 
             if (cliente == null)
             {
                 return NotFound(new ErrorResponseDTO { Message = "Cliente no encontrado", StatusCode = 404 });
@@ -32,7 +32,6 @@ namespace back_end.Modules.clientes.Controllers
             return Ok(cliente);
         }
 
-        // POST: api/clientes/{correo}
         [HttpPost("{correo}")]
         public async Task<IActionResult> Create(string correo, [FromBody] ClienteCreateDTO dto)
         {

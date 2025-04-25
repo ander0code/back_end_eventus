@@ -14,7 +14,6 @@ namespace back_end.Modules.servicios.Repositories
         Task<Servicio?> UpdateAsync(Servicio servicio);
         Task<bool> DeleteAsync(Servicio servicio);
         
-        // Métodos para gestionar los items del servicio (ServicioItem)
         Task<ServicioItem?> GetServicioItemByIdAsync(Guid id);
         Task<List<ServicioItem>> GetServicioItemsByServicioIdAsync(Guid servicioId);
         Task<ServicioItem?> AddServicioItemAsync(ServicioItem item);
@@ -93,14 +92,12 @@ namespace back_end.Modules.servicios.Repositories
         {
             try
             {
-                // Primero eliminar los items relacionados para evitar violaciones de integridad referencial
                 var items = await _context.ServicioItems
                     .Where(si => si.ServicioId == servicio.Id)
                     .ToListAsync();
                 
                 _context.ServicioItems.RemoveRange(items);
-                
-                // Luego eliminar el servicio
+
                 _context.Servicios.Remove(servicio);
                 await _context.SaveChangesAsync();
                 return true;
@@ -111,7 +108,6 @@ namespace back_end.Modules.servicios.Repositories
             }
         }
 
-        // Implementación de métodos para gestionar los ServicioItems
         public async Task<ServicioItem?> GetServicioItemByIdAsync(Guid id)
         {
             return await _context.ServicioItems

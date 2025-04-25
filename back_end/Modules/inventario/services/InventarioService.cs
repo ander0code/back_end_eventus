@@ -75,13 +75,12 @@ namespace back_end.Modules.inventario.services
 
         public async Task<InventarioResponseDTO?> UpdateAsync(Guid id, string correo, InventarioUpdateDTO dto)
         {
-            // Primero verificamos que el item pertenezca al usuario
+
             var inventarios = await _inventarioRepository.GetByCorreoAsync(correo);
             var inventario = inventarios.FirstOrDefault(i => i.Id == id);
             
             if (inventario == null) return null;
-            
-            // Actualizar solo las propiedades que no son nulas
+
             if (dto.Nombre != null) inventario.Nombre = dto.Nombre;
             if (dto.Descripcion != null) inventario.Descripcion = dto.Descripcion;
             if (dto.Stock != null) inventario.Stock = dto.Stock;
@@ -95,27 +94,25 @@ namespace back_end.Modules.inventario.services
         {
             try
             {
-                // Primero verificamos que el item pertenezca al usuario
+
                 var inventarios = await _inventarioRepository.GetByCorreoAsync(correo);
                 var inventario = inventarios.FirstOrDefault(i => i.Id == id);
                 
                 if (inventario == null) return false;
                 
-                // El repositorio ahora eliminará primero los ServicioItems relacionados
-                // y luego el elemento de inventario
                 return await _inventarioRepository.DeleteAsync(inventario);
             }
             catch (Exception ex)
             {
-                // Log the exception
+
                 Console.WriteLine($"Error al eliminar inventario: {ex.Message}");
-                throw; // Re-throw to let controller handle it
+                throw;
             }
         }
 
         public async Task<bool> ActualizarStockAsync(Guid id, string correo, int cantidad)
         {
-            // Primero verificamos que el item pertenezca al usuario
+
             var inventarios = await _inventarioRepository.GetByCorreoAsync(correo);
             var inventario = inventarios.FirstOrDefault(i => i.Id == id);
             
@@ -126,10 +123,9 @@ namespace back_end.Modules.inventario.services
         
         public async Task<List<InventarioResponseDTO>> SearchByNameOrCategoryAsync(string correo, string searchTerm)
         {
-            // Buscar todos los items por nombre o categoría
+
             var allResults = await _inventarioRepository.SearchByNameOrCategoryAsync(searchTerm);
-            
-            // Filtrar solo los del usuario actual
+
             var usuario = await _usuarioRepository.GetByCorreoAsync(correo);
             if (usuario == null) return new List<InventarioResponseDTO>();
             
@@ -139,10 +135,9 @@ namespace back_end.Modules.inventario.services
         
         public async Task<List<InventarioResponseDTO>> GetByStockBelowMinAsync(string correo, int minStock)
         {
-            // Buscar items con stock por debajo del mínimo
+
             var allResults = await _inventarioRepository.GetByStockBelowMinAsync(minStock);
-            
-            // Filtrar solo los del usuario actual
+
             var usuario = await _usuarioRepository.GetByCorreoAsync(correo);
             if (usuario == null) return new List<InventarioResponseDTO>();
             

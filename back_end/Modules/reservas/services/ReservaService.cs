@@ -114,7 +114,6 @@ namespace back_end.Modules.reservas.Services
 
             var creada = await _reservaRepo.CreateAsync(reserva);
             
-            // Agregar servicios a la reserva
             if (dto.Servicios != null && dto.Servicios.Count > 0)
             {
                 _logger.LogInformation("Agregando {Count} servicios a la reserva {ReservaId}", 
@@ -125,13 +124,11 @@ namespace back_end.Modules.reservas.Services
                     await AddServicioToReservaAsync(correo, creada.Id, servicioId);
                 }
             }
-            
-            // Recalcular el precio total
+
             var total = await CalcularTotalReservaAsync(correo, creada.Id);
             creada.PrecioTotal = total;
             await _reservaRepo.UpdateAsync(creada);
             
-            // Volvemos a cargar la reserva completa con sus relaciones
             var reservaCompleta = await _reservaRepo.GetByIdAndCorreoAsync(creada.Id, correo);
             return reservaCompleta == null ? null : MapToDTO(reservaCompleta);
         }
@@ -141,7 +138,6 @@ namespace back_end.Modules.reservas.Services
             var reserva = await _reservaRepo.GetByIdAndCorreoAsync(id, correo);
             if (reserva == null) return null;
 
-            // Actualizar campos proporcionados
             if (dto.NombreEvento != null) reserva.NombreEvento = dto.NombreEvento;
             if (dto.FechaEvento.HasValue) reserva.FechaEvento = dto.FechaEvento;
             if (dto.HoraEvento != null) reserva.HoraEvento = dto.HoraEvento;
@@ -149,9 +145,6 @@ namespace back_end.Modules.reservas.Services
             if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
             if (dto.Estado != null) reserva.Estado = dto.Estado;
             
-            // No actualizamos el precio total aquí ya que se recalculará después de agregar/eliminar servicios
-            
-            // Procesar los servicios a eliminar
             if (dto.ItemsToRemove != null && dto.ItemsToRemove.Any())
             {
                 _logger.LogInformation("Eliminando {Count} servicios de la reserva {ReservaId}", 
@@ -167,7 +160,6 @@ namespace back_end.Modules.reservas.Services
                 }
             }
             
-            // Procesar los servicios a agregar
             if (dto.ItemsToAdd != null && dto.ItemsToAdd.Any())
             {
                 _logger.LogInformation("Agregando {Count} servicios a la reserva {ReservaId}", 
@@ -175,10 +167,8 @@ namespace back_end.Modules.reservas.Services
                 
                 foreach (var item in dto.ItemsToAdd)
                 {
-                    // Verificar que el servicio no esté ya en la reserva
                     if (!reserva.ReservaServicios.Any(rs => rs.ServicioId == item.ServicioId))
                     {
-                        // Verificar que el servicio exista
                         var servicio = await _servicioRepo.GetByIdAsync(item.ServicioId);
                         if (servicio != null)
                         {
@@ -186,8 +176,8 @@ namespace back_end.Modules.reservas.Services
                             {
                                 ReservaId = reserva.Id,
                                 ServicioId = item.ServicioId,
-                                CantidadItems = 1, // Por defecto es 1
-                                Precio = servicio.PrecioBase // Usamos el precio del servicio directamente
+                                CantidadItems = 1,
+                                Precio = servicio.PrecioBase 
                             };
                             
                             await _reservaRepo.AddReservaServicioAsync(reservaServicio);
@@ -195,14 +185,12 @@ namespace back_end.Modules.reservas.Services
                     }
                 }
             }
-            
-            // Recalcular el precio total después de los cambios en servicios
+
             var total = await CalcularTotalReservaAsync(correo, reserva.Id);
             reserva.PrecioTotal = total;
             
             var actualizada = await _reservaRepo.UpdateAsync(reserva);
             
-            // Volvemos a cargar la reserva completa con sus relaciones actualizadas
             var reservaCompleta = await _reservaRepo.GetByIdAndCorreoAsync(actualizada.Id, correo);
             return reservaCompleta == null ? null : MapToDTO(reservaCompleta);
         }
@@ -212,7 +200,6 @@ namespace back_end.Modules.reservas.Services
             var reserva = await _reservaRepo.GetByIdAndCorreoAsync(id, correo);
             if (reserva == null) return false;
             
-            // Primero eliminar los servicios relacionados
             foreach (var reservaServicio in reserva.ReservaServicios.ToList())
             {
                 await _reservaRepo.RemoveReservaServicioAsync(reservaServicio);
@@ -223,36 +210,31 @@ namespace back_end.Modules.reservas.Services
         
         public async Task<bool> AddServicioToReservaAsync(string correo, Guid reservaId, Guid servicioId)
         {
-            // Verificar que la reserva pertenezca al usuario
             var reserva = await _reservaRepo.GetByIdAndCorreoAsync(reservaId, correo);
             if (reserva == null) return false;
             
-            // Verificar que el servicio exista
             var servicio = await _servicioRepo.GetByIdAsync(servicioId);
             if (servicio == null) return false;
-            
-            // Verificar si ya existe el servicio en la reserva
+  
             var existingServicio = reserva.ReservaServicios.FirstOrDefault(rs => rs.ServicioId == servicioId);
             if (existingServicio != null)
             {
-                // Si ya existe, no hacemos nada y retornamos éxito
                 return true;
             }
             else
             {
-                // Crear nueva relación usando el precio del servicio y cantidad 1
+
                 var reservaServicio = new ReservaServicio
                 {
                     ReservaId = reservaId,
                     ServicioId = servicioId,
-                    CantidadItems = 1, // Por defecto es 1
-                    Precio = servicio.PrecioBase // Usamos el precio del servicio directamente
+                    CantidadItems = 1, 
+                    Precio = servicio.PrecioBase 
                 };
                 
                 await _reservaRepo.AddReservaServicioAsync(reservaServicio);
             }
             
-            // Recalcular el total
             var total = await CalcularTotalReservaAsync(correo, reservaId);
             reserva.PrecioTotal = total;
             await _reservaRepo.UpdateAsync(reserva);
@@ -262,20 +244,17 @@ namespace back_end.Modules.reservas.Services
         
         public async Task<bool> RemoveServicioFromReservaAsync(string correo, Guid reservaId, Guid servicioId)
         {
-            // Verificar que la reserva pertenezca al usuario
+
             var reserva = await _reservaRepo.GetByIdAndCorreoAsync(reservaId, correo);
             if (reserva == null) return false;
             
-            // Buscar el servicio en la reserva
             var reservaServicio = reserva.ReservaServicios.FirstOrDefault(rs => rs.ServicioId == servicioId);
             if (reservaServicio == null) return false;
             
-            // Eliminar la relación
             var result = await _reservaRepo.RemoveReservaServicioAsync(reservaServicio);
             
             if (result)
             {
-                // Recalcular el total
                 var total = await CalcularTotalReservaAsync(correo, reservaId);
                 reserva.PrecioTotal = total;
                 await _reservaRepo.UpdateAsync(reserva);
@@ -286,15 +265,12 @@ namespace back_end.Modules.reservas.Services
         
         public async Task<bool> UpdateServicioInReservaAsync(string correo, Guid reservaId, Guid servicioId, int cantidad, decimal? precio)
         {
-            // Verificar que la reserva pertenezca al usuario
             var reserva = await _reservaRepo.GetByIdAndCorreoAsync(reservaId, correo);
             if (reserva == null) return false;
             
-            // Buscar el servicio en la reserva
             var reservaServicio = reserva.ReservaServicios.FirstOrDefault(rs => rs.ServicioId == servicioId);
             if (reservaServicio == null) return false;
-            
-            // Actualizar la cantidad y precio
+
             reservaServicio.CantidadItems = cantidad;
             if (precio.HasValue)
             {
@@ -303,7 +279,6 @@ namespace back_end.Modules.reservas.Services
             
             var result = await _reservaRepo.UpdateReservaServicioAsync(reservaServicio);
             
-            // Recalcular el total
             var total = await CalcularTotalReservaAsync(correo, reservaId);
             reserva.PrecioTotal = total;
             await _reservaRepo.UpdateAsync(reserva);
@@ -313,13 +288,11 @@ namespace back_end.Modules.reservas.Services
         
         public async Task<decimal> CalcularTotalReservaAsync(string correo, Guid reservaId)
         {
-            // Verificar que la reserva pertenezca al usuario
             var reserva = await _reservaRepo.GetByIdAndCorreoAsync(reservaId, correo);
             if (reserva == null) return 0;
             
             decimal total = 0;
-            
-            // Sumar el precio de cada servicio por su cantidad
+
             foreach (var rs in reserva.ReservaServicios)
             {
                 if (rs.Precio.HasValue && rs.CantidadItems.HasValue)
@@ -333,23 +306,18 @@ namespace back_end.Modules.reservas.Services
 
         public async Task<bool> ReplaceServicioInReservaAsync(string correo, Guid reservaId, Guid oldServicioId, Guid newServicioId, int? cantidad, decimal? precio)
         {
-            // Verificar que la reserva pertenezca al usuario
             var reserva = await _reservaRepo.GetByIdAndCorreoAsync(reservaId, correo);
             if (reserva == null) return false;
 
-            // Buscar el servicio antiguo en la reserva
             var oldReservaServicio = reserva.ReservaServicios.FirstOrDefault(rs => rs.ServicioId == oldServicioId);
             if (oldReservaServicio == null) return false;
 
-            // Verificar que el nuevo servicio exista
             var newServicio = await _servicioRepo.GetByIdAsync(newServicioId);
             if (newServicio == null) return false;
 
-            // Eliminar el servicio antiguo
             var removeResult = await _reservaRepo.RemoveReservaServicioAsync(oldReservaServicio);
             if (!removeResult) return false;
 
-            // Agregar el nuevo servicio
             var newReservaServicio = new ReservaServicio
             {
                 ReservaId = reservaId,
@@ -360,7 +328,6 @@ namespace back_end.Modules.reservas.Services
 
             await _reservaRepo.AddReservaServicioAsync(newReservaServicio);
 
-            // Recalcular el total
             var total = await CalcularTotalReservaAsync(correo, reservaId);
             reserva.PrecioTotal = total;
             await _reservaRepo.UpdateAsync(reserva);
@@ -383,10 +350,9 @@ namespace back_end.Modules.reservas.Services
                 NombreCliente = r.Cliente?.Nombre,
                 CorreoCliente = r.Cliente?.CorreoElectronico,
                 TelefonoCliente = r.Cliente?.Telefono,
-                FechaReserva = DateTime.UtcNow // No está en el modelo, usamos la fecha actual
+                FechaReserva = DateTime.UtcNow 
             };
 
-            // Procesar los servicios de la reserva
             if (r.ReservaServicios != null && r.ReservaServicios.Any())
             {
                 foreach (var rs in r.ReservaServicios)

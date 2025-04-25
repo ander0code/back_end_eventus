@@ -19,8 +19,7 @@ namespace back_end.Modules.dashboard.Controllers
             _logger = logger;
         }
         
-        // GET: api/dashboard/{correo}
-        // Endpoint consolidado que devuelve toda la información del dashboard
+
         [HttpGet("{correo}")]
         public async Task<IActionResult> GetAllDashboardData(string correo)
         {
@@ -28,12 +27,12 @@ namespace back_end.Modules.dashboard.Controllers
             {
                 _logger.LogInformation("Solicitando información completa del dashboard para usuario: {Correo}", correo);
                 
-                // Ejecutar las consultas secuencialmente para evitar problemas de concurrencia con DbContext
+
                 var metricas = await _service.GetMetricsAsync(correo);
-                var proximasReservas = await _service.GetProximasReservasAsync(correo, 4); // 4 próximas reservas
-                var actividadReciente = await _service.GetActividadRecienteAsync(correo, 10); // 10 actividades recientes
+                var proximasReservas = await _service.GetProximasReservasAsync(correo, 4);
+                var actividadReciente = await _service.GetActividadRecienteAsync(correo, 10); 
                 
-                // Consolidar todos los datos en una respuesta
+
                 var dashboardData = new 
                 {
                     Metricas = metricas,

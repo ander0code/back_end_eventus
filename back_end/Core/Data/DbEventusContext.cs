@@ -35,11 +35,10 @@ public partial class DbEventusContext : DbContext
 
 protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
 {
-    // Solo configurar si no está ya configurado por la inyección de dependencias
+
     if (!optionsBuilder.IsConfigured)
     {
-        // Esto es solo un fallback y no se usará en aplicaciones normales
-        // donde el DbContext se inyecta correctamente
+
     }
 }
     protected override void OnModelCreating(ModelBuilder modelBuilder)

@@ -5,7 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace back_end.Modules.Auth.Controllers
 {
     [ApiController]
-    [Route("api/auth")] // Ruta explícita en minúsculas para consistencia
+    [Route("api/auth")] 
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _authService;

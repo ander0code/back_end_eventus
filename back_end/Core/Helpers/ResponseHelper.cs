@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace back_end.Core.Helpers
 {
-    // Clase para estandarizar las respuestas de la API
+
     public class ApiResponse<T>
     {
         public bool Success { get; set; }
@@ -12,16 +12,14 @@ namespace back_end.Core.Helpers
         public IEnumerable<string> Errors { get; set; }
         public DateTime Timestamp { get; set; } = DateTime.UtcNow;
 
-        // Constructor para respuestas exitosas
         public ApiResponse(T data, string message )
         {
             Success = true;
             Message = message ?? "Operación completada con éxito";
             Data = data;
-            Errors = Array.Empty<string>(); // Inicializar Errors para evitar error de non-null
+            Errors = Array.Empty<string>();
         }
 
-        // Constructor para respuestas de error
         public ApiResponse(string errorMessage, IEnumerable<string> errors )
         {
             Success = false;
@@ -30,7 +28,6 @@ namespace back_end.Core.Helpers
         }
     }
 
-    // Métodos de extensión para facilitar el uso en controladores
     public static class ResponseExtensions
     {
         public static ApiResponse<T> Success<T>(this T data, string message )

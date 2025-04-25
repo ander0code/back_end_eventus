@@ -22,7 +22,7 @@ namespace back_end.Modules.dashboard.services
 
         public async Task<DashboardMetricsDTO> GetMetricsAsync(string correo)
         {
-            // Obtener usuario por correo
+
             var usuario = await _context.Usuarios
                 .FirstOrDefaultAsync(u => u.CorreoElectronico == correo);
             
@@ -31,11 +31,10 @@ namespace back_end.Modules.dashboard.services
 
             var userId = usuario.Id;
             
-            // Obtener fecha de inicio del mes actual para filtrar
+
             var fechaInicioDeMes = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
             var fechaFinDeMes = fechaInicioDeMes.AddMonths(1).AddDays(-1);
 
-            // Consultas para obtener métricas
             var totalInventario = await _context.Inventarios
                 .CountAsync(i => i.UsuarioId == userId);
                 
@@ -48,7 +47,6 @@ namespace back_end.Modules.dashboard.services
             var cantidadServicios = await _context.Servicios
                 .CountAsync(s => s.UsuarioId == userId);
             
-            // Métricas del mes actual
             var reservasConfirmadas = await _context.Reservas
                 .CountAsync(r => r.UsuarioId == userId && 
                                 r.Estado == "Confirmado" && 
@@ -61,15 +59,13 @@ namespace back_end.Modules.dashboard.services
                                 r.FechaEvento >= DateOnly.FromDateTime(fechaInicioDeMes) && 
                                 r.FechaEvento <= DateOnly.FromDateTime(fechaFinDeMes));
             
-            // Calcular ingresos estimados sumando precioTotal de reservas confirmadas del mes
             var ingresosEstimados = await _context.Reservas
                 .Where(r => r.UsuarioId == userId && 
                            r.Estado == "Confirmado" && 
                            r.FechaEvento >= DateOnly.FromDateTime(fechaInicioDeMes) && 
                            r.FechaEvento <= DateOnly.FromDateTime(fechaFinDeMes))
                 .SumAsync(r => r.PrecioTotal ?? 0);
-            
-            // Crear DTO con las métricas
+
             var metrics = new DashboardMetricsDTO
             {
                 TotalInventarioItems = totalInventario,
@@ -86,7 +82,7 @@ namespace back_end.Modules.dashboard.services
 
         public async Task<ProximasReservasDTO> GetProximasReservasAsync(string correo, int cantidad = 4)
         {
-            // Obtener usuario por correo
+
             var usuario = await _context.Usuarios
                 .FirstOrDefaultAsync(u => u.CorreoElectronico == correo);
             
@@ -95,16 +91,14 @@ namespace back_end.Modules.dashboard.services
 
             var userId = usuario.Id;
             
-            // Obtenemos la fecha actual para comparar
             var fechaActual = DateOnly.FromDateTime(DateTime.Now);
             
-            // Obtener las próximas reservas ordenadas por fecha
             var proximasReservas = await _context.Reservas
                 .Where(r => r.UsuarioId == userId && 
                            (r.Estado == "Confirmado" || r.Estado == "Pendiente") && 
                            r.FechaEvento >= fechaActual)
                 .OrderBy(r => r.FechaEvento)
-                .ThenBy(r => r.HoraEvento) // Ordenar por hora si hay varias el mismo día
+                .ThenBy(r => r.HoraEvento)
                 .Take(cantidad)
                 .Select(r => new ProximaReservaDTO
                 {
@@ -116,14 +110,13 @@ namespace back_end.Modules.dashboard.services
                 })
                 .ToListAsync();
             
-            // Si no hay reservas futuras, podríamos intentar ver si hay reservas recientes (incluido hoy)
             if (!proximasReservas.Any())
             {
-                // Obtener reservas del día actual o próximas, aunque la hora ya haya pasado
+
                 proximasReservas = await _context.Reservas
                     .Where(r => r.UsuarioId == userId && 
                               (r.Estado == "Confirmado" || r.Estado == "Pendiente") &&
-                              r.FechaEvento >= fechaActual.AddDays(-7)) // Incluir reservas de la última semana
+                              r.FechaEvento >= fechaActual.AddDays(-7)) 
                     .OrderByDescending(r => r.FechaEvento)
                     .Take(cantidad)
                     .Select(r => new ProximaReservaDTO
@@ -145,7 +138,7 @@ namespace back_end.Modules.dashboard.services
 
         public async Task<ActividadRecienteDTO> GetActividadRecienteAsync(string correo, int cantidad = 10)
         {
-            // Obtener usuario por correo
+
             var usuario = await _context.Usuarios
                 .FirstOrDefaultAsync(u => u.CorreoElectronico == correo);
             
@@ -154,27 +147,24 @@ namespace back_end.Modules.dashboard.services
 
             var userId = usuario.Id;
             
-            // Lista para almacenar todas las actividades
             var todasLasActividades = new List<ActividadRecienteItemDTO>();
-            
-            // 1. Nuevas reservas
+
             var nuevasReservas = await _context.Reservas
                 .Where(r => r.UsuarioId == userId)
-                .OrderByDescending(r => r.Id) // Asumiendo que el ID es secuencial o hay un campo de fecha que no está en el modelo
+                .OrderByDescending(r => r.Id) 
                 .Take(cantidad)
                 .Select(r => new ActividadRecienteItemDTO
                 {
                     Id = r.Id,
                     Tipo = "Reserva",
                     Nombre = r.NombreEvento,
-                    FechaRegistro = DateTime.Now.AddDays(-new Random().Next(1, 10)), // Simulación - en un caso real usaríamos una fecha de registro real
-                    TiempoTranscurrido = "Hace poco" // Se calculará después
+                    FechaRegistro = DateTime.Now.AddDays(-new Random().Next(1, 10)),
+                    TiempoTranscurrido = "Hace poco" 
                 })
                 .ToListAsync();
             
             todasLasActividades.AddRange(nuevasReservas);
             
-            // 2. Nuevos clientes
             var nuevosClientes = await _context.Clientes
                 .Where(c => c.UsuarioId == userId)
                 .OrderByDescending(c => c.FechaRegistro)
@@ -185,13 +175,12 @@ namespace back_end.Modules.dashboard.services
                     Tipo = "Cliente",
                     Nombre = c.Nombre,
                     FechaRegistro = c.FechaRegistro ?? DateTime.Now,
-                    TiempoTranscurrido = "Hace poco" // Se calculará después
+                    TiempoTranscurrido = "Hace poco" 
                 })
                 .ToListAsync();
             
             todasLasActividades.AddRange(nuevosClientes);
-            
-            // 3. Eventos finalizados (reservas pasadas con estado "Finalizado")
+
             var eventosFinalizados = await _context.Reservas
                 .Where(r => r.UsuarioId == userId && 
                            r.Estado == "Finalizado" || 
@@ -203,14 +192,13 @@ namespace back_end.Modules.dashboard.services
                     Id = r.Id,
                     Tipo = "EventoFinalizado",
                     Nombre = r.NombreEvento,
-                    FechaRegistro = DateTime.Now.AddDays(-new Random().Next(5, 30)), // Simulación
-                    TiempoTranscurrido = "Hace poco" // Se calculará después
+                    FechaRegistro = DateTime.Now.AddDays(-new Random().Next(5, 30)), 
+                    TiempoTranscurrido = "Hace poco" 
                 })
                 .ToListAsync();
             
             todasLasActividades.AddRange(eventosFinalizados);
             
-            // 4. Nuevos items de inventario
             var nuevosItems = await _context.Inventarios
                 .Where(i => i.UsuarioId == userId)
                 .OrderByDescending(i => i.FechaRegistro)
@@ -221,19 +209,17 @@ namespace back_end.Modules.dashboard.services
                     Tipo = "Item",
                     Nombre = i.Nombre,
                     FechaRegistro = i.FechaRegistro ?? DateTime.Now,
-                    TiempoTranscurrido = "Hace poco" // Se calculará después
+                    TiempoTranscurrido = "Hace poco"
                 })
                 .ToListAsync();
             
             todasLasActividades.AddRange(nuevosItems);
             
-            // Ordenar todas las actividades por fecha de registro descendente
             todasLasActividades = todasLasActividades
                 .OrderByDescending(a => a.FechaRegistro)
                 .Take(cantidad)
                 .ToList();
-            
-            // Calcular el tiempo transcurrido para cada actividad
+
             foreach (var actividad in todasLasActividades)
             {
                 actividad.TiempoTranscurrido = CalcularTiempoTranscurrido(actividad.FechaRegistro);

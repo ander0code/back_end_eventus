@@ -73,7 +73,7 @@ namespace back_end.Modules.inventario.Repositories
 
         public async Task<bool> DeleteAsync(Inventario inventario)
         {
-            // Primero eliminar todos los ServicioItem asociados al elemento de inventario
+
             var servicioItems = await _context.ServicioItems
                 .Where(si => si.InventarioId == inventario.Id)
                 .ToListAsync();
@@ -81,11 +81,10 @@ namespace back_end.Modules.inventario.Repositories
             if (servicioItems.Any())
             {
                 _context.ServicioItems.RemoveRange(servicioItems);
-                // Guardar cambios para eliminar los items de servicio primero
+
                 await _context.SaveChangesAsync();
             }
 
-            // Ahora proceder a eliminar el elemento del inventario
             _context.Inventarios.Remove(inventario);
             return await _context.SaveChangesAsync() > 0;
         }
