@@ -7,7 +7,7 @@ namespace back_end.Modules.dashboard.services
     public interface IDashboardService
     {
         Task<DashboardMetricsDTO> GetMetricsAsync(string correo);
-        Task<ProximasReservasDTO> GetProximasReservasAsync(string correo, int cantidad = 3);
+        Task<ProximasReservasDTO> GetProximasReservasAsync(string correo, int cantidad = 4);
         Task<ActividadRecienteDTO> GetActividadRecienteAsync(string correo, int cantidad = 10);
     }
 
@@ -84,7 +84,7 @@ namespace back_end.Modules.dashboard.services
             return metrics;
         }
 
-        public async Task<ProximasReservasDTO> GetProximasReservasAsync(string correo, int cantidad = 3)
+        public async Task<ProximasReservasDTO> GetProximasReservasAsync(string correo, int cantidad = 4)
         {
             // Obtener usuario por correo
             var usuario = await _context.Usuarios
@@ -95,12 +95,16 @@ namespace back_end.Modules.dashboard.services
 
             var userId = usuario.Id;
             
+            // Obtenemos la fecha actual para comparar
+            var fechaActual = DateOnly.FromDateTime(DateTime.Now);
+            
             // Obtener las próximas reservas ordenadas por fecha
             var proximasReservas = await _context.Reservas
                 .Where(r => r.UsuarioId == userId && 
                            (r.Estado == "Confirmado" || r.Estado == "Pendiente") && 
-                           r.FechaEvento >= DateOnly.FromDateTime(DateTime.Now))
+                           r.FechaEvento >= fechaActual)
                 .OrderBy(r => r.FechaEvento)
+                .ThenBy(r => r.HoraEvento) // Ordenar por hora si hay varias el mismo día
                 .Take(cantidad)
                 .Select(r => new ProximaReservaDTO
                 {
@@ -111,6 +115,27 @@ namespace back_end.Modules.dashboard.services
                     Descripcion = r.Descripcion
                 })
                 .ToListAsync();
+            
+            // Si no hay reservas futuras, podríamos intentar ver si hay reservas recientes (incluido hoy)
+            if (!proximasReservas.Any())
+            {
+                // Obtener reservas del día actual o próximas, aunque la hora ya haya pasado
+                proximasReservas = await _context.Reservas
+                    .Where(r => r.UsuarioId == userId && 
+                              (r.Estado == "Confirmado" || r.Estado == "Pendiente") &&
+                              r.FechaEvento >= fechaActual.AddDays(-7)) // Incluir reservas de la última semana
+                    .OrderByDescending(r => r.FechaEvento)
+                    .Take(cantidad)
+                    .Select(r => new ProximaReservaDTO
+                    {
+                        Id = r.Id,
+                        NombreEvento = r.NombreEvento,
+                        FechaEvento = r.FechaEvento,
+                        HoraEvento = r.HoraEvento,
+                        Descripcion = r.Descripcion
+                    })
+                    .ToListAsync();
+            }
             
             return new ProximasReservasDTO
             {

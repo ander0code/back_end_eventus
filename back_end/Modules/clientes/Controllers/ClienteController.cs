@@ -85,37 +85,5 @@ namespace back_end.Modules.clientes.Controllers
                 return StatusCode(500, new ErrorResponseDTO { Message = "Error al eliminar cliente", StatusCode = 500 });
             }
         }
-
-        [HttpGet("buscar")]
-        public async Task<IActionResult> Search([FromQuery] string? query)
-        {
-            try
-            {
-                _logger.LogInformation("Solicitud para buscar clientes con el término: {Query}", query);
-                var clientes = await _clienteService.SearchAsync(query);
-                return Ok(clientes);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al buscar clientes con el término: {Query}", query);
-                return StatusCode(500, new ErrorResponseDTO { Message = "Error al buscar clientes", StatusCode = 500 });
-            }
-        }
-
-        [HttpGet("filtrar")]
-        public async Task<IActionResult> FilterByTipoCliente([FromQuery] string tipoCliente)
-        {
-            try
-            {
-                _logger.LogInformation("Solicitud para filtrar clientes por tipo: {TipoCliente}", tipoCliente);
-                var clientes = await _clienteService.FilterByTipoClienteAsync(tipoCliente);
-                return Ok(clientes);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al filtrar clientes por tipo: {TipoCliente}", tipoCliente);
-                return StatusCode(500, new ErrorResponseDTO { Message = "Error al filtrar clientes", StatusCode = 500 });
-            }
-        }
     }
 }

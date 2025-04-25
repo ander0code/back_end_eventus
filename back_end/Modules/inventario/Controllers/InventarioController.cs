@@ -19,45 +19,6 @@ namespace back_end.Modules.inventario.Controllers
             _logger = logger;
         }
 
-        [HttpGet]
-        public async Task<IActionResult> GetAll()
-        {
-            try
-            {
-                _logger.LogInformation("Solicitando todos los items de inventario");
-                var inventario = await _service.GetAllAsync();
-                return Ok(inventario);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener todos los items de inventario");
-                return StatusCode(500, new { message = "Error al obtener inventario", error = ex.Message });
-            }
-        }
-
-        [HttpGet("{id:guid}")]
-        public async Task<IActionResult> GetById(Guid id)
-        {
-            try
-            {
-                _logger.LogInformation("Solicitando item de inventario con ID: {Id}", id);
-                var item = await _service.GetByIdAsync(id);
-                
-                if (item == null)
-                {
-                    _logger.LogWarning("Item de inventario no encontrado con ID: {Id}", id);
-                    return NotFound(new { message = "Item no encontrado" });
-                }
-                
-                return Ok(item);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener item de inventario con ID: {Id}", id);
-                return StatusCode(500, new { message = "Error al obtener item", error = ex.Message });
-            }
-        }
-
         [HttpGet("usuario/{usuarioId:guid}")]
         public async Task<IActionResult> GetByUsuarioId(Guid usuarioId)
         {
@@ -71,64 +32,6 @@ namespace back_end.Modules.inventario.Controllers
             {
                 _logger.LogError(ex, "Error al obtener items de inventario para usuario con ID: {UsuarioId}", usuarioId);
                 return StatusCode(500, new { message = "Error al obtener inventario", error = ex.Message });
-            }
-        }
-        
-        [HttpGet("correo/{correo}")]
-        public async Task<IActionResult> GetByCorreo(string correo)
-        {
-            try
-            {
-                _logger.LogInformation("Solicitando items de inventario para usuario con correo: {Correo}", correo);
-                var items = await _service.GetByCorreoAsync(correo);
-                return Ok(items);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener items de inventario para usuario con correo: {Correo}", correo);
-                return StatusCode(500, new { message = "Error al obtener inventario", error = ex.Message });
-            }
-        }
-        
-        [HttpGet("buscar/{correo}")]
-        public async Task<IActionResult> SearchByNameOrCategory(string correo, [FromQuery] string termino)
-        {
-            try
-            {
-                if (string.IsNullOrWhiteSpace(termino))
-                {
-                    return BadRequest(new { message = "El término de búsqueda es requerido" });
-                }
-                
-                _logger.LogInformation("Buscando items de inventario con término: {Termino} para usuario: {Correo}", termino, correo);
-                var items = await _service.SearchByNameOrCategoryAsync(correo, termino);
-                return Ok(items);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al buscar items de inventario para usuario con correo: {Correo}", correo);
-                return StatusCode(500, new { message = "Error al buscar items", error = ex.Message });
-            }
-        }
-        
-        [HttpGet("alertas/{correo}")]
-        public async Task<IActionResult> GetStockAlerts(string correo, [FromQuery] int minStock = 5)
-        {
-            try
-            {
-                _logger.LogInformation("Obteniendo alertas de stock bajo (menos de {MinStock}) para usuario: {Correo}", minStock, correo);
-                var items = await _service.GetByStockBelowMinAsync(correo, minStock);
-                
-                return Ok(new { 
-                    message = $"Items con stock menor a {minStock}", 
-                    count = items.Count, 
-                    items 
-                });
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener alertas de stock para usuario con correo: {Correo}", correo);
-                return StatusCode(500, new { message = "Error al obtener alertas", error = ex.Message });
             }
         }
 
@@ -151,7 +54,7 @@ namespace back_end.Modules.inventario.Controllers
                     return NotFound(new { message = "Usuario no encontrado" });
                 }
                 
-                return CreatedAtAction(nameof(GetById), new { id = creado.Id }, creado);
+                return CreatedAtAction(nameof(GetByUsuarioId), new { usuarioId = creado.Id }, creado);
             }
             catch (Exception ex)
             {
