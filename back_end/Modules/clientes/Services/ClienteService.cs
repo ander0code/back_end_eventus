@@ -65,17 +65,38 @@ namespace back_end.Modules.clientes.Services
 
             var creado = await _repository.CreateAsync(cliente);
             return MapToDTO(creado);
-        }
-
-        public async Task<ClienteResponseDTO?> UpdateAsync(string id, ClienteUpdateDTO dto)
+        }        public async Task<ClienteResponseDTO?> UpdateAsync(string id, ClienteUpdateDTO dto)
         {
             var cliente = await _repository.GetByIdAsync(id);
             if (cliente == null) return null;
 
+            // Actualizar propiedades del cliente
             cliente.TipoCliente = dto.TipoCliente ?? cliente.TipoCliente;
             cliente.Direccion = dto.Direccion ?? cliente.Direccion;
             cliente.Ruc = dto.Ruc ?? cliente.Ruc;
             cliente.RazonSocial = dto.RazonSocial ?? cliente.RazonSocial;
+
+            // Actualizar también los campos del usuario asociado
+            if (cliente.Usuario != null && (dto.Nombre != null || dto.CorreoElectronico != null || dto.Telefono != null))
+            {
+                if (dto.Nombre != null)
+                {
+                    cliente.Usuario.Nombre = dto.Nombre;
+                }
+                
+                if (dto.CorreoElectronico != null)
+                {
+                    cliente.Usuario.Correo = dto.CorreoElectronico;
+                }
+                
+                if (dto.Telefono != null)
+                {
+                    cliente.Usuario.Celular = dto.Telefono;
+                }
+
+                // Guardar el usuario actualizado
+                await _usuarioRepository.UpdateAsync(cliente.Usuario);
+            }
 
             var actualizado = await _repository.UpdateAsync(cliente);
             return MapToDTO(actualizado);
@@ -87,9 +108,7 @@ namespace back_end.Modules.clientes.Services
             if (cliente == null) return false;
 
             return await _repository.DeleteAsync(cliente);
-        }
-
-        private ClienteResponseDTO MapToDTO(Cliente c) => new ClienteResponseDTO
+        }        private ClienteResponseDTO MapToDTO(Cliente c) => new ClienteResponseDTO
         {
             Id = c.Id,
             TipoCliente = c.TipoCliente,
@@ -97,8 +116,11 @@ namespace back_end.Modules.clientes.Services
             Ruc = c.Ruc,
             RazonSocial = c.RazonSocial,
             UsuarioId = c.UsuarioId,
-            NombreUsuario = c.Usuario != null ? $"{c.Usuario.Nombre} {c.Usuario.Apellido}" : string.Empty,
+            NombreUsuario = c.Usuario != null ? $"{c.Usuario.Nombre} {c.Usuario.Apellido}".Trim() : string.Empty,
             CorreoUsuario = c.Usuario?.Correo,
+            Nombre = c.Usuario?.Nombre,
+            CorreoElectronico = c.Usuario?.Correo,
+            Telefono = c.Usuario?.Celular,
             TotalReservas = c.Reservas.Count,
             UltimaFechaReserva = c.Reservas
                 .OrderByDescending(r => r.FechaEjecucion)

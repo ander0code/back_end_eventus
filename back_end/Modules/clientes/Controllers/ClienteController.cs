@@ -65,13 +65,19 @@ namespace back_end.Modules.clientes.Controllers
             }
         }
 
-        // PUT: api/clientes/{id}
-        [HttpPut("{id}")]
+        // PUT: api/clientes/{id}        [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] ClienteUpdateDTO dto)
         {
             try
             {
                 _logger.LogInformation("Solicitud de actualización para cliente con ID: {Id}", id);
+                
+                // Validación adicional para el correo electrónico
+                if (dto.CorreoElectronico != null && !IsValidEmail(dto.CorreoElectronico))
+                {
+                    return BadRequest(new { Message = "El formato del correo electrónico no es válido", StatusCode = 400 });
+                }
+                
                 var actualizado = await _clienteService.UpdateAsync(id, dto);
                 if (actualizado == null)
                 {
@@ -85,6 +91,20 @@ namespace back_end.Modules.clientes.Controllers
             {
                 _logger.LogError(ex, "Error al actualizar cliente con ID: {Id}", id);
                 return StatusCode(500, new { Message = "Error al actualizar cliente", StatusCode = 500 });
+            }
+        }
+        
+        // Método auxiliar para validar el formato del correo electrónico
+        private bool IsValidEmail(string email)
+        {
+            try
+            {
+                var addr = new System.Net.Mail.MailAddress(email);
+                return addr.Address == email;
+            }
+            catch
+            {
+                return false;
             }
         }
 
