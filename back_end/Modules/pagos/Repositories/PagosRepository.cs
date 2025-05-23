@@ -1,6 +1,7 @@
 using back_end.Core.Data;
 using back_end.Modules.pagos.Models;
 using Microsoft.EntityFrameworkCore;
+using back_end.Core.Utils;
 
 namespace back_end.Modules.pagos.Repositories
 {
@@ -48,10 +49,14 @@ namespace back_end.Modules.pagos.Repositories
                 .Include(p => p.IdTipoPagoNavigation)
                 .Where(p => p.IdReserva == reservaId)
                 .ToListAsync();
-        }
-
-        public async Task<Pago> CreateAsync(Pago pago)
+        }        public async Task<Pago> CreateAsync(Pago pago)
         {
+            // Generar ID personalizado si no se ha proporcionado uno
+            if (string.IsNullOrEmpty(pago.Id))
+            {
+                pago.Id = IdGenerator.GenerateId("Pago");
+            }
+            
             _context.Pagos.Add(pago);
             await _context.SaveChangesAsync();
             return pago;

@@ -1,6 +1,7 @@
 using back_end.Core.Data;
 using back_end.Modules.Item.Models;
 using Microsoft.EntityFrameworkCore;
+using back_end.Core.Utils;
 
 namespace back_end.Modules.Item.Repositories
 {
@@ -46,13 +47,32 @@ namespace back_end.Modules.Item.Repositories
             return await _context.Items
                 .Include(i => i.DetalleServicios)
                 .ToListAsync();
-        }
-
-        public async Task<Models.Item> CreateAsync(Models.Item item)
+        }        public async Task<Models.Item> CreateAsync(Models.Item item)
         {
+            // Si el ID es vacío, generamos un nuevo ID personalizado (convertido a Guid)
+            if (item.Id == Guid.Empty)
+            {
+                // Generamos un ID personalizado
+                string customId = IdGenerator.GenerateId("Item");
+                // Creamos un hash determinístico basado en el ID personalizado
+                Guid itemGuid = CreateDeterministicGuid(customId);
+                item.Id = itemGuid;
+            }
+            
             _context.Items.Add(item);
             await _context.SaveChangesAsync();
             return item;
+        }
+        
+        // Método auxiliar para crear un Guid determinístico a partir de un string
+        private Guid CreateDeterministicGuid(string input)
+        {
+            // Usar MD5 para crear un hash determinístico (para este caso es aceptable)
+            using (var md5 = System.Security.Cryptography.MD5.Create())
+            {
+                byte[] hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
+                return new Guid(hash);
+            }
         }
 
         public async Task<Models.Item> UpdateAsync(Models.Item item)

@@ -1,6 +1,7 @@
 using back_end.Core.Data;
 using back_end.Modules.reservas.Models;
 using Microsoft.EntityFrameworkCore;
+using back_end.Core.Utils;
 
 namespace back_end.Modules.reservas.Repositories
 {
@@ -79,14 +80,12 @@ namespace back_end.Modules.reservas.Repositories
                 .Include(r => r.TiposEventoNavigation)
                 .Include(r => r.Pagos)
                 .FirstOrDefaultAsync(r => r.Id == id && clientes.Contains(r.ClienteId!));
-        }
-
-        public async Task<Reserva> CreateAsync(Reserva reserva)
+        }        public async Task<Reserva> CreateAsync(Reserva reserva)
         {
-            // Asignar un ID único si no tiene uno
+            // Asignar un ID personalizado usando nuestro generador
             if (string.IsNullOrEmpty(reserva.Id))
             {
-                reserva.Id = Guid.NewGuid().ToString();
+                reserva.Id = IdGenerator.GenerateId("Reserva");
             }
             
             // Establecer la fecha de registro

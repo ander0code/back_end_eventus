@@ -1,6 +1,7 @@
 using back_end.Core.Data;
 using back_end.Modules.clientes.Models;
 using Microsoft.EntityFrameworkCore;
+using back_end.Core.Utils;
 
 namespace back_end.Modules.clientes.Repositories
 {
@@ -35,10 +36,14 @@ namespace back_end.Modules.clientes.Repositories
                 .Include(c => c.Usuario)
                 .Include(c => c.Reservas)
                 .FirstOrDefaultAsync(c => c.Id == id);
-        }
-
-        public async Task<Cliente> CreateAsync(Cliente cliente)
+        }        public async Task<Cliente> CreateAsync(Cliente cliente)
         {
+            // Generar ID personalizado si no se ha proporcionado uno
+            if (string.IsNullOrEmpty(cliente.Id))
+            {
+                cliente.Id = IdGenerator.GenerateId("Cliente");
+            }
+            
             _context.Clientes.Add(cliente);
             await _context.SaveChangesAsync();
             return cliente;

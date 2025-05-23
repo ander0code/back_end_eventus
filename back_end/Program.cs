@@ -14,6 +14,7 @@ using back_end.Modules.clientes.Services;
 using back_end.Modules.organizador.services;
 using back_end.Modules.organizador.Repositories;
 using back_end.Modules.pagos.Repositories;
+using back_end.Core.Utils;
 using back_end.Modules.pagos.services;
 using back_end.Modules.dashboard.services;
 using Microsoft.EntityFrameworkCore;
@@ -23,7 +24,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Configuration
     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true)
     .AddJsonFile($"appsettings.{builder.Environment.EnvironmentName}.json", optional: true, reloadOnChange: true)
-    .AddJsonFile("appsettings.Local.json", optional: true, reloadOnChange: true) 
+    .AddJsonFile("appsettings.Local.json", optional: false, reloadOnChange: true) // Cambiado a false para asegurarse de que se cargue
     .AddEnvironmentVariables() 
     .AddUserSecrets<Program>(optional: true); 
 
@@ -108,5 +109,26 @@ app.UseAuthentication();
 app.UseAuthorization();
 
 app.MapControllers();
+
+// Inicializar los contadores para el generador de IDs
+using (var scope = app.Services.CreateScope())
+{
+    var services = scope.ServiceProvider;
+    try
+    {
+        var context = services.GetRequiredService<DbEventusContext>();
+        var counterPersistence = new CounterPersistence(context);
+        // Inicializar los contadores de forma sincrónica para asegurar que estén listos antes de continuar
+        counterPersistence.InitializeCounters().GetAwaiter().GetResult();
+        
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogInformation("Contadores de ID inicializados correctamente");
+    }
+    catch (Exception ex)
+    {
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        logger.LogError(ex, "Error al inicializar los contadores de ID");
+    }
+}
 
 app.Run();

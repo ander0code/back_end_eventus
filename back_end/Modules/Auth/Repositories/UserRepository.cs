@@ -3,6 +3,7 @@ using back_end.Modules.Auth.DTOs;
 using back_end.Modules.organizador.Models;
 using Microsoft.EntityFrameworkCore;
 using System;
+using back_end.Core.Utils;
 
 namespace back_end.Modules.Auth.Repositories
 {
@@ -46,16 +47,15 @@ namespace back_end.Modules.Auth.Repositories
                 Nombre = usuario.Nombre ?? string.Empty,
                 Apellido = usuario.Apellido ?? string.Empty
             };
-        }
-
-        public async Task<UsuarioAuthDTO> RegisterUser(RegisterRequestDTO request)
+        }        public async Task<UsuarioAuthDTO> RegisterUser(RegisterRequestDTO request)
         {
-            string id = Guid.NewGuid().ToString();
+            // Generar ID personalizado para Usuario
+            string userId = IdGenerator.GenerateId("Usuario");
             
             // Primero creamos el usuario
             var usuario = new Usuario
             {
-                Id = id,
+                Id = userId,
                 Nombre = request.Nombre,
                 Apellido = request.Apellido,
                 Correo = request.Email,
@@ -64,13 +64,13 @@ namespace back_end.Modules.Auth.Repositories
 
             _context.Usuarios.Add(usuario);
             
-            // Luego creamos el organizador asociado
+            // Luego creamos el organizador asociado con ID personalizado
             var organizador = new Organizador
             {
-                Id = Guid.NewGuid().ToString(),
+                Id = IdGenerator.GenerateId("Organizador"),
                 NombreNegocio = $"{request.Nombre}'s Business",
                 Contrasena = HashPassword(request.Password),
-                UsuarioId = id
+                UsuarioId = userId
             };
             
             _context.Organizadors.Add(organizador);

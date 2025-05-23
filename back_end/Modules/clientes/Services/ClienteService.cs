@@ -3,6 +3,7 @@ using back_end.Modules.clientes.Models;
 using back_end.Modules.clientes.Repositories;
 using back_end.Modules.organizador.Models;
 using back_end.Modules.organizador.Repositories;
+using back_end.Core.Utils;
 
 namespace back_end.Modules.clientes.Services
 {
@@ -29,17 +30,40 @@ namespace back_end.Modules.clientes.Services
         {
             var clientes = await _repository.GetByCorreoUsuarioAsync(correo);
             return clientes.Select(MapToDTO).ToList();
-        }
-
-        public async Task<ClienteResponseDTO?> CreateAsync(string correo, ClienteCreateDTO dto)
+        }        public async Task<ClienteResponseDTO?> CreateAsync(string correo, ClienteCreateDTO dto)
         {
-            var usuario = await _usuarioRepository.GetByCorreoAsync(correo);
-            if (usuario == null) return null;
+            // Primero verificamos si existe el usuario organizador que está creando al cliente
+            var organizador = await _usuarioRepository.GetByCorreoAsync(correo);
+            if (organizador == null) return null;
+            
+            // Luego verificamos si ya existe un usuario con el correo proporcionado
+            Usuario? clienteUsuario = null;
+            if (!string.IsNullOrEmpty(dto.CorreoElectronico))
+            {
+                clienteUsuario = await _usuarioRepository.GetByCorreoAsync(dto.CorreoElectronico);
+            }
+            
+            if (clienteUsuario == null)
+            {
+                // Si no existe, creamos un nuevo usuario para el cliente
+                clienteUsuario = new Usuario
+                {
+                    Id = IdGenerator.GenerateId("Usuario"),
+                    Nombre = dto.Nombre,
+                    Apellido = null, // Como indicaste, lo dejamos nulo
+                    Correo = dto.CorreoElectronico,
+                    Celular = dto.Telefono
+                };
+                
+                // Guardamos el nuevo usuario
+                clienteUsuario = await _usuarioRepository.CreateAsync(clienteUsuario);
+            }
 
+            // Ahora creamos el cliente asociado al usuario
             var cliente = new Cliente
             {
-                Id = Guid.NewGuid().ToString(),
-                UsuarioId = usuario.Id,
+                Id = IdGenerator.GenerateId("Cliente"),
+                UsuarioId = clienteUsuario.Id,
                 TipoCliente = dto.TipoCliente,
                 Direccion = dto.Direccion,
                 Ruc = dto.Ruc,
