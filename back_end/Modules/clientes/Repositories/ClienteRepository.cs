@@ -4,14 +4,14 @@ using Microsoft.EntityFrameworkCore;
 using back_end.Core.Utils;
 
 namespace back_end.Modules.clientes.Repositories
-{
-    public interface IClienteRepository
+{    public interface IClienteRepository
     {
         Task<List<Cliente>> GetByCorreoUsuarioAsync(string correoUsuario);
         Task<Cliente?> GetByIdAsync(string id);
         Task<Cliente> CreateAsync(Cliente cliente);
         Task<Cliente> UpdateAsync(Cliente cliente);
         Task<bool> DeleteAsync(Cliente cliente);
+        Task<List<Cliente>> GetAllAsync();
     }
 
     public class ClienteRepository : IClienteRepository
@@ -54,12 +54,18 @@ namespace back_end.Modules.clientes.Repositories
             _context.Entry(cliente).State = EntityState.Modified;
             await _context.SaveChangesAsync();
             return cliente;
-        }
-
-        public async Task<bool> DeleteAsync(Cliente cliente)
+        }        public async Task<bool> DeleteAsync(Cliente cliente)
         {
             _context.Clientes.Remove(cliente);
             return await _context.SaveChangesAsync() > 0;
+        }
+        
+        public async Task<List<Cliente>> GetAllAsync()
+        {
+            return await _context.Clientes
+                .Include(c => c.Usuario)
+                .Include(c => c.Reservas)
+                .ToListAsync();
         }
     }
 }

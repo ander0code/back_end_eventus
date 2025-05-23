@@ -21,25 +21,51 @@ namespace back_end.Modules.clientes.Controllers
         {
             _clienteService = clienteService;
             _logger = logger;
-        }        [HttpGet("usuario/{correo}")]
-        public async Task<IActionResult> GetByUsuarioCorreo(string correo)
-        {
-            var clientes = await _clienteService.GetByUsuarioCorreoAsync(correo); 
-            if (clientes == null || !clientes.Any())
-            {
-                return NotFound(new ErrorResponseDTO { Message = "No se encontraron clientes para este usuario", StatusCode = 404 });
-            }
-
-            return Ok(clientes);
         }
 
-        [HttpPost("{correo}")]
-        public async Task<IActionResult> Create(string correo, [FromBody] ClienteCreateDTO dto)
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
         {
-            var cliente = await _clienteService.CreateAsync(correo, dto);
-            if (cliente == null) return BadRequest("Usuario no encontrado");
-            return CreatedAtAction(nameof(GetByUsuarioCorreo), new { correo = correo }, cliente);
-        }        // PUT: api/clientes/{id}
+            try
+            {
+                _logger.LogInformation("Solicitud para obtener todos los clientes");
+                var clientes = await _clienteService.GetAllAsync();
+                if (clientes == null || !clientes.Any())
+                {
+                    return NotFound(new { Message = "No se encontraron clientes", StatusCode = 404 });
+                }
+
+                return Ok(clientes);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener todos los clientes");
+                return StatusCode(500, new { Message = "Error al obtener clientes", StatusCode = 500 });
+            }
+        }
+
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] ClienteCreateDTO dto)
+        {
+            try
+            {
+                _logger.LogInformation("Solicitud para crear un nuevo cliente");
+                var cliente = await _clienteService.CreateAsync(dto);
+                if (cliente == null) 
+                {
+                    return BadRequest(new { Message = "No se pudo crear el cliente", StatusCode = 400 });
+                }
+                
+                return CreatedAtAction(nameof(GetAll), null, cliente);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al crear el cliente");
+                return StatusCode(500, new { Message = "Error al crear cliente", StatusCode = 500 });
+            }
+        }
+
+        // PUT: api/clientes/{id}
         [HttpPut("{id}")]
         public async Task<IActionResult> Update(string id, [FromBody] ClienteUpdateDTO dto)
         {
@@ -50,7 +76,7 @@ namespace back_end.Modules.clientes.Controllers
                 if (actualizado == null)
                 {
                     _logger.LogWarning("No se encontró el cliente para actualizar con ID: {Id}", id);
-                    return NotFound(new ErrorResponseDTO { Message = "Cliente no encontrado", StatusCode = 404 });
+                    return NotFound(new { Message = "Cliente no encontrado", StatusCode = 404 });
                 }
 
                 return Ok(actualizado);
@@ -58,9 +84,11 @@ namespace back_end.Modules.clientes.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al actualizar cliente con ID: {Id}", id);
-                return StatusCode(500, new ErrorResponseDTO { Message = "Error al actualizar cliente", StatusCode = 500 });
+                return StatusCode(500, new { Message = "Error al actualizar cliente", StatusCode = 500 });
             }
-        }        [HttpDelete("{id}")]
+        }
+
+        [HttpDelete("{id}")]
         public async Task<IActionResult> Delete(string id)
         {
             try
@@ -70,7 +98,7 @@ namespace back_end.Modules.clientes.Controllers
                 if (!eliminado)
                 {
                     _logger.LogWarning("No se encontró el cliente para eliminar con ID: {Id}", id);
-                    return NotFound(new ErrorResponseDTO { Message = "Cliente no encontrado", StatusCode = 404 });
+                    return NotFound(new { Message = "Cliente no encontrado", StatusCode = 404 });
                 }
 
                 return NoContent();
@@ -78,7 +106,7 @@ namespace back_end.Modules.clientes.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al eliminar cliente con ID: {Id}", id);
-                return StatusCode(500, new ErrorResponseDTO { Message = "Error al eliminar cliente", StatusCode = 500 });
+                return StatusCode(500, new { Message = "Error al eliminar cliente", StatusCode = 500 });
             }
         }
     }
