@@ -4,13 +4,13 @@ using back_end.Modules.Item.Models;
 using Microsoft.EntityFrameworkCore;
 
 namespace back_end.Modules.servicios.Repositories
-{
+{    
     public interface IServicioRepository
     {
-        Task<List<Servicio>> GetByCorreoAsync(string correo);
-        Task<List<Servicio>> SearchServiciosAsync(string correo, string searchTerm);
+        Task<List<Servicio>> GetAllAsync();
+        Task<List<Servicio>> SearchServiciosAsync(string searchTerm);
         Task<Servicio?> GetByIdAsync(Guid id);
-        Task<Servicio?> GetByIdAndCorreoAsync(Guid id, string correo);
+        
         Task<Servicio?> CreateAsync(Servicio servicio);
         Task<Servicio?> UpdateAsync(Servicio servicio);
         Task<bool> DeleteAsync(Servicio servicio);
@@ -21,26 +21,16 @@ namespace back_end.Modules.servicios.Repositories
         Task<DetalleServicio?> UpdateDetalleServicioAsync(DetalleServicio detalle);
         Task<bool> RemoveDetalleServicioAsync(DetalleServicio detalle);
         Task<bool> RemoveMultipleDetalleServiciosAsync(IEnumerable<DetalleServicio> detalles);
-        
-        // Métodos para compatibilidad con el código antiguo
-        Task<DetalleServicio?> GetServicioItemByIdAsync(Guid id);
-        Task<List<DetalleServicio>> GetServicioItemsByServicioIdAsync(Guid servicioId);
-        Task<DetalleServicio?> AddServicioItemAsync(DetalleServicio item);
-        Task<DetalleServicio?> UpdateServicioItemAsync(DetalleServicio item);
-        Task<bool> RemoveServicioItemAsync(DetalleServicio item);
-        Task<bool> RemoveMultipleServicioItemsAsync(IEnumerable<DetalleServicio> items);
-    }
-
-    public class ServicioRepository : IServicioRepository
+    }    public class ServicioRepository : IServicioRepository
     {
         private readonly DbEventusContext _context;
 
         public ServicioRepository(DbEventusContext context)
         {
             _context = context;
-        }
-
-        public async Task<List<Servicio>> GetByCorreoAsync(string correo)
+        }        
+        // Método para obtener todos los servicios
+        public async Task<List<Servicio>> GetAllAsync()
         {
             return await _context.Servicios
                 .Include(s => s.DetalleServicios)
@@ -48,7 +38,8 @@ namespace back_end.Modules.servicios.Repositories
                 .ToListAsync();
         }
         
-        public async Task<List<Servicio>> SearchServiciosAsync(string correo, string searchTerm)
+        // Método para buscar servicios
+        public async Task<List<Servicio>> SearchServiciosAsync(string searchTerm)
         {
             return await _context.Servicios
                 .Include(s => s.DetalleServicios)
@@ -56,17 +47,7 @@ namespace back_end.Modules.servicios.Repositories
                 .Where(s => s.Nombre != null && s.Nombre.Contains(searchTerm) || 
                            (s.Descripcion != null && s.Descripcion.Contains(searchTerm)))
                 .ToListAsync();
-        }
-
-        public async Task<Servicio?> GetByIdAsync(Guid id)
-        {
-            return await _context.Servicios
-                .Include(s => s.DetalleServicios)
-                    .ThenInclude(ds => ds.Inventario)
-                .FirstOrDefaultAsync(s => s.Id == id);
-        }
-
-        public async Task<Servicio?> GetByIdAndCorreoAsync(Guid id, string correo)
+        }        public async Task<Servicio?> GetByIdAsync(Guid id)
         {
             return await _context.Servicios
                 .Include(s => s.DetalleServicios)

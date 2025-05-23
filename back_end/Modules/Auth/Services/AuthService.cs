@@ -45,13 +45,11 @@ namespace back_end.Modules.Auth.Services
 
             var token = GenerateJwtToken(user);
 
-            _logger.LogInformation("Login exitoso para: {Email}", request.Email);
-
-            return new AuthResponseDTO
+            _logger.LogInformation("Login exitoso para: {Email}", request.Email);            return new AuthResponseDTO
             {
                 Email = user.Correo,
                 Token = token,
-                UserId = Guid.Parse(user.Id),
+                UserId = user.Id, // Usamos el string directamente
                 Nombre = user.Nombre,
                 Apellido = user.Apellido
             };
@@ -69,11 +67,9 @@ namespace back_end.Modules.Auth.Services
             _logger.LogInformation("Usuario registrado correctamente: {Email}", request.Email);
             
             var token = GenerateJwtToken(newUser);
-            _logger.LogInformation("Token generado para usuario nuevo: {Email}", request.Email);
-
-            return new RegisterResponseDTO
+            _logger.LogInformation("Token generado para usuario nuevo: {Email}", request.Email);            return new RegisterResponseDTO
             {
-                UserId = Guid.Parse(newUser.Id),
+                UserId = newUser.Id, // Ahora usamos directamente el string
                 Email = newUser.Correo,
                 Token = token,
                 Nombre = newUser.Nombre,

@@ -1,5 +1,7 @@
 ﻿namespace back_end.Modules.servicios.Models;
 using back_end.Modules.Item.Models;
+
+
 public partial class DetalleServicio
 {
     public Guid Id { get; set; }
