@@ -19,94 +19,85 @@ namespace back_end.Modules.Item.Controllers
             _logger = logger;
         }
 
-        [HttpGet("usuario/{usuarioId:guid}")]
-        public async Task<IActionResult> GetByUsuarioId(Guid usuarioId)
+        [HttpGet]
+        public async Task<IActionResult> GetAll()
         {
             try
             {
-                _logger.LogInformation("Solicitando items para usuario con ID: {UsuarioId}", usuarioId);
-                var items = await _service.GetByUsuarioIdAsync(usuarioId);
+                _logger.LogInformation("Obteniendo todos los items");
+                var items = await _service.GetAllAsync();
                 return Ok(items);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener items para usuario con ID: {UsuarioId}", usuarioId);
+                _logger.LogError(ex, "Error al obtener todos los items");
                 return StatusCode(500, new { message = "Error al obtener items", error = ex.Message });
             }
         }
 
-        [HttpPost("{correo}")]
-        public async Task<IActionResult> Create(string correo, [FromBody] ItemCreateDTO dto)
+        [HttpPost]
+        public async Task<IActionResult> Create([FromBody] ItemCreateDTO dto)
         {
             try
             {
-                _logger.LogInformation("Creando nuevo item para usuario con correo: {Correo}", correo);
+                _logger.LogInformation("Creando nuevo item");
                 
                 // Validación básica
                 if (string.IsNullOrWhiteSpace(dto.Nombre))
                     return BadRequest(new { message = "El nombre del item es requerido" });
                 
-                var creado = await _service.CreateAsync(correo, dto);
+                var creado = await _service.CreateAsync(dto);
                 
                 if (creado == null)
-                {
-                    _logger.LogWarning("Usuario no encontrado con correo: {Correo}", correo);
-                    return NotFound(new { message = "Usuario no encontrado" });
-                }
+                    return StatusCode(500, new { message = "Error al crear el item" });
                 
-                return CreatedAtAction(nameof(GetByUsuarioId), new { usuarioId = creado.Id }, creado);
+                return CreatedAtAction(nameof(GetAll), null, creado);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear item para usuario con correo: {Correo}", correo);
+                _logger.LogError(ex, "Error al crear item");
                 return StatusCode(500, new { message = "Error al crear item", error = ex.Message });
             }
         }
 
-        [HttpPut("{correo}/{id:guid}")]
-        public async Task<IActionResult> Update(string correo, Guid id, [FromBody] ItemUpdateDTO dto)
+        [HttpPut("{id:guid}")]
+        public async Task<IActionResult> Update(Guid id, [FromBody] ItemUpdateDTO dto)
         {
             try
             {
-                _logger.LogInformation("Actualizando item con ID: {Id} para usuario con correo: {Correo}", id, correo);
+                _logger.LogInformation("Actualizando item con ID: {Id}", id);
                 
-                var actualizado = await _service.UpdateAsync(id, correo, dto);
+                var actualizado = await _service.UpdateAsync(id, dto);
                 
                 if (actualizado == null)
-                {
-                    _logger.LogWarning("Item no encontrado con ID: {Id} para correo: {Correo}", id, correo);
-                    return NotFound(new { message = "Item no encontrado o no pertenece al usuario" });
-                }
+                    return NotFound(new { message = "Item no encontrado" });
                 
                 return Ok(actualizado);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar item con ID: {Id} para correo: {Correo}", id, correo);
+                _logger.LogError(ex, "Error al actualizar item con ID: {Id}", id);
                 return StatusCode(500, new { message = "Error al actualizar item", error = ex.Message });
             }
         }
 
-        [HttpDelete("{correo}/{id:guid}")]
-        public async Task<IActionResult> Delete(string correo, Guid id)
+        [HttpDelete("{id:guid}")]
+        public async Task<IActionResult> Delete(Guid id)
         {
             try
             {
-                _logger.LogInformation("Eliminando item con ID: {Id} para usuario con correo: {Correo}", id, correo);
+                _logger.LogInformation("Eliminando item con ID: {Id}", id);
                 
-                var resultado = await _service.DeleteAsync(id, correo);
+                var resultado = await _service.DeleteAsync(id);
                 
                 if (!resultado)
-                {
-                    _logger.LogWarning("Item no encontrado con ID: {Id} para correo: {Correo}", id, correo);
-                    return NotFound(new { message = "Item no encontrado o no pertenece al usuario" });
-                }
+                    return NotFound(new { message = "Item no encontrado" });
                 
                 return Ok(new { message = "Item eliminado correctamente" });
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar item con ID: {Id} para correo: {Correo}", id, correo);
+                _logger.LogError(ex, "Error al eliminar item con ID: {Id}", id);
                 return StatusCode(500, new { message = "Error al eliminar item", error = ex.Message });
             }
         }

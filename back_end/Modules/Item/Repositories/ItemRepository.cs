@@ -9,7 +9,6 @@ namespace back_end.Modules.Item.Repositories
     {
         Task<List<Models.Item>> GetAllAsync();
         Task<Models.Item?> GetByIdAsync(Guid id);
-        Task<List<Models.Item>> GetByCorreoAsync(string correo);
         Task<Models.Item> CreateAsync(Models.Item item);
         Task<Models.Item> UpdateAsync(Models.Item item);
         Task<bool> DeleteAsync(Models.Item item);
@@ -40,14 +39,7 @@ namespace back_end.Modules.Item.Repositories
                 .FirstOrDefaultAsync(i => i.Id == id);
         }
 
-        public async Task<List<Models.Item>> GetByCorreoAsync(string correo)
-        {
-            // Suponiendo que necesitas relacionar ítems con usuarios a través de alguna relación
-            // Esta parte podría requerir ajustes según la estructura de tu base de datos
-            return await _context.Items
-                .Include(i => i.DetalleServicios)
-                .ToListAsync();
-        }        public async Task<Models.Item> CreateAsync(Models.Item item)
+        public async Task<Models.Item> CreateAsync(Models.Item item)
         {
             // Si el ID es vacío, generamos un nuevo ID personalizado (convertido a Guid)
             if (item.Id == Guid.Empty)

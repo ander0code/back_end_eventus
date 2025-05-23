@@ -13,12 +13,11 @@ namespace back_end.Modules.Item.Services
     {
         Task<List<ItemResponseDTO>> GetAllAsync();
         Task<ItemResponseDTO?> GetByIdAsync(Guid id);
-        Task<ItemResponseDTO?> CreateAsync(string correo, ItemCreateDTO dto);
-        Task<ItemResponseDTO?> UpdateAsync(Guid id, string correo, ItemUpdateDTO dto);
-        Task<bool> DeleteAsync(Guid id, string correo);
+        Task<ItemResponseDTO?> CreateAsync(ItemCreateDTO dto);
+        Task<ItemResponseDTO?> UpdateAsync(Guid id, ItemUpdateDTO dto);
+        Task<bool> DeleteAsync(Guid id);
         Task<List<ItemResponseDTO>> SearchByNameAsync(string term);
         Task<bool> UpdateStockAsync(Guid id, int newStock);
-        Task<List<ItemResponseDTO>> GetByUsuarioIdAsync(Guid usuarioId);
     }
 
     public class ItemService : IItemService
@@ -60,7 +59,7 @@ namespace back_end.Modules.Item.Services
             }
         }
 
-        public async Task<ItemResponseDTO?> CreateAsync(string correo, ItemCreateDTO dto)
+        public async Task<ItemResponseDTO?> CreateAsync(ItemCreateDTO dto)
         {
             try
             {
@@ -83,7 +82,7 @@ namespace back_end.Modules.Item.Services
             }
         }
 
-        public async Task<ItemResponseDTO?> UpdateAsync(Guid id, string correo, ItemUpdateDTO dto)
+        public async Task<ItemResponseDTO?> UpdateAsync(Guid id, ItemUpdateDTO dto)
         {
             try
             {
@@ -105,7 +104,7 @@ namespace back_end.Modules.Item.Services
             }
         }
 
-        public async Task<bool> DeleteAsync(Guid id, string correo)
+        public async Task<bool> DeleteAsync(Guid id)
         {
             try
             {
@@ -150,22 +149,6 @@ namespace back_end.Modules.Item.Services
             {
                 _logger.LogError(ex, "Error al actualizar stock del item con ID {Id}", id);
                 return false;
-            }
-        }
-
-        public async Task<List<ItemResponseDTO>> GetByUsuarioIdAsync(Guid usuarioId)
-        {
-            try
-            {
-                // Aquí se implementaría la lógica para obtener items por usuario
-                // Por ahora, solo devolvemos todos los items como ejemplo
-                var items = await _repository.GetAllAsync();
-                return items.Select(MapToDTO).ToList();
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al obtener items para usuario {UsuarioId}", usuarioId);
-                return new List<ItemResponseDTO>();
             }
         }
 
