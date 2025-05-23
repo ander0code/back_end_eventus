@@ -31,7 +31,11 @@ builder.Configuration
 
 builder.Services.AddAppSettings();
 
-builder.Services.AddControllers();
+builder.Services.AddControllers(options =>
+{
+    // Esto ayuda a resolver ambigüedades en los métodos HTTP
+    options.SuppressAsyncSuffixInActionNames = false;
+});
 builder.Services.AddEndpointsApiExplorer();
 
 builder.Services.AddSwaggerConfiguration();

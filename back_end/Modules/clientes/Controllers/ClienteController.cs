@@ -2,16 +2,22 @@ using back_end.Modules.clientes.DTOs;
 using back_end.Modules.clientes.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using System.Reflection;
+
+// Asegurarnos de que solo hay un controlador con este nombre en el ensamblado
+// El problema podría ser que hay dos controladores con el mismo nombre en diferentes partes del código
 
 namespace back_end.Modules.clientes.Controllers
 {
     [ApiController]
     [Route("api/clientes")]
     [Authorize]
+    [Produces("application/json")]
     public class ClienteController : ControllerBase
     {
         private readonly IClienteService _clienteService;
@@ -65,8 +71,13 @@ namespace back_end.Modules.clientes.Controllers
             }
         }
 
-        // PUT: api/clientes/{id}        [HttpPut("{id}")]
-        public async Task<IActionResult> Update(string id, [FromBody] ClienteUpdateDTO dto)
+        // PUT: api/clientes/{id}        // PUT: api/clientes/{id}
+        [HttpPut("{id}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> UpdateCliente(string id, [FromBody] ClienteUpdateDTO dto)
         {
             try
             {
@@ -106,10 +117,11 @@ namespace back_end.Modules.clientes.Controllers
             {
                 return false;
             }
-        }
-
-        [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(string id)
+        }        [HttpDelete("{id}")]
+        [ProducesResponseType(StatusCodes.Status204NoContent)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
+        public async Task<IActionResult> DeleteCliente(string id)
         {
             try
             {
