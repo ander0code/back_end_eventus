@@ -6,11 +6,10 @@ using back_end.Modules.organizador.Repositories;
 using back_end.Core.Utils;
 
 namespace back_end.Modules.clientes.Services
-{
-    public interface IClienteService
+{    public interface IClienteService
     {
-        Task<List<ClienteResponseDTO>> GetByUsuarioCorreoAsync(string correo);
-        Task<ClienteResponseDTO?> CreateAsync(string correo, ClienteCreateDTO dto);
+        Task<List<ClienteResponseDTO>> GetAllAsync();
+        Task<ClienteResponseDTO?> CreateAsync(ClienteCreateDTO dto);
         Task<ClienteResponseDTO?> UpdateAsync(string id, ClienteUpdateDTO dto);
         Task<bool> DeleteAsync(string id);
     }
@@ -24,19 +23,13 @@ namespace back_end.Modules.clientes.Services
         {
             _repository = repository;
             _usuarioRepository = usuarioRepository;
-        }
-
-        public async Task<List<ClienteResponseDTO>> GetByUsuarioCorreoAsync(string correo)
+        }        public async Task<List<ClienteResponseDTO>> GetAllAsync()
         {
-            var clientes = await _repository.GetByCorreoUsuarioAsync(correo);
+            var clientes = await _repository.GetAllAsync();
             return clientes.Select(MapToDTO).ToList();
-        }        public async Task<ClienteResponseDTO?> CreateAsync(string correo, ClienteCreateDTO dto)
+        }public async Task<ClienteResponseDTO?> CreateAsync(ClienteCreateDTO dto)
         {
-            // Primero verificamos si existe el usuario organizador que está creando al cliente
-            var organizador = await _usuarioRepository.GetByCorreoAsync(correo);
-            if (organizador == null) return null;
-            
-            // Luego verificamos si ya existe un usuario con el correo proporcionado
+            // Verificamos si ya existe un usuario con el correo proporcionado
             Usuario? clienteUsuario = null;
             if (!string.IsNullOrEmpty(dto.CorreoElectronico))
             {
@@ -50,7 +43,7 @@ namespace back_end.Modules.clientes.Services
                 {
                     Id = IdGenerator.GenerateId("Usuario"),
                     Nombre = dto.Nombre,
-                    Apellido = null, // Como indicaste, lo dejamos nulo
+                    Apellido = null, // Lo dejamos nulo como indicaste
                     Correo = dto.CorreoElectronico,
                     Celular = dto.Telefono
                 };
