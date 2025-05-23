@@ -5,24 +5,28 @@ using back_end.Modules.organizador.Repositories;
 using back_end.Modules.servicios.Repositories;
 using back_end.Modules.clientes.Models;
 using back_end.Modules.clientes.Repositories;
-using Microsoft.Extensions.Logging;
+using back_end.Core.Utils;
 
 namespace back_end.Modules.reservas.Services
-{
-    public interface IReservaService
+{    public interface IReservaService
     {
-        Task<List<ReservaResponseDTO>> GetByCorreoAsync(string correo);
-        Task<ReservaResponseDTO?> GetByIdAsync(string correo, string id);
-        Task<ReservaResponseDTO?> CreateAsync(string correo, ReservaCreateDTO dto);
-        Task<ReservaResponseDTO?> UpdateAsync(string correo, string id, ReservaUpdateDTO dto);
-        Task<bool> DeleteAsync(string correo, string id);
+        Task<List<ReservaResponseDTO>> GetAllAsync();
+        Task<ReservaResponseDTO?> GetByIdAsync(Guid id);
+        Task<ReservaResponseDTO?> CreateAsync(ReservaCreateDTO dto);
+        Task<ReservaResponseDTO?> UpdateAsync(Guid id, ReservaUpdateDTO dto);
+        Task<bool> DeleteAsync(Guid id);
+        
+        // Servicios de la reserva
+        Task<bool> AddServicioToReservaAsync(Guid reservaId, Guid servicioId);
+        Task<bool> RemoveServicioFromReservaAsync(Guid reservaId, Guid servicioId);
+        Task<bool> UpdateServicioInReservaAsync(Guid reservaId, Guid servicioId, int cantidad, decimal? precio);
+        Task<decimal> CalcularTotalReservaAsync(Guid reservaId);
+        Task<bool> ReplaceServicioInReservaAsync(Guid reservaId, Guid oldServicioId, Guid newServicioId, int? cantidad, decimal? precio);
         
         // Tipos de evento
-        Task<List<TipoEventoDTO>> GetAllTiposEventoAsync();
-        Task<TipoEventoDTO?> GetTipoEventoByIdAsync(Guid id);
-    }
-
-    public class ReservaService : IReservaService
+        Task<List<TipoEventoResponseDTO>> GetAllTiposEventoAsync();
+        Task<TipoEventoResponseDTO?> GetTipoEventoByIdAsync(Guid id);
+    }    public class ReservaService : IReservaService
     {
         private readonly IReservaRepository _reservaRepo;
         private readonly IUsuarioRepository _usuarioRepo;
@@ -32,7 +36,7 @@ namespace back_end.Modules.reservas.Services
 
         public ReservaService(
             IReservaRepository reservaRepo, 
-            IUsuarioRepository usuarioRepo, 
+            IUsuarioRepository usuarioRepo,
             IServicioRepository servicioRepo,
             IClienteRepository clienteRepo,
             ILogger<ReservaService> logger)
@@ -44,73 +48,57 @@ namespace back_end.Modules.reservas.Services
             _logger = logger;
         }
 
-        public async Task<List<ReservaResponseDTO>> GetByCorreoAsync(string correo)
+        public async Task<List<ReservaResponseDTO>> GetAllAsync()
         {
-            var reservas = await _reservaRepo.GetByCorreoUsuarioAsync(correo);
+            var reservas = await _reservaRepo.GetAllAsync();
             return reservas.Select(MapToDTO).ToList();
         }
         
-        public async Task<ReservaResponseDTO?> GetByIdAsync(string correo, string id)
+        public async Task<ReservaResponseDTO?> GetByIdAsync(Guid id)
         {
-            var reserva = await _reservaRepo.GetByIdAndCorreoAsync(id, correo);
+            var reserva = await _reservaRepo.GetByIdAsync(id.ToString());
             return reserva == null ? null : MapToDTO(reserva);
-        }
-
-        public async Task<ReservaResponseDTO?> CreateAsync(string correo, ReservaCreateDTO dto)
+        }        public async Task<ReservaResponseDTO?> CreateAsync(ReservaCreateDTO dto)
         {
-            var usuario = await _usuarioRepo.GetByCorreoAsync(correo);
-            if (usuario == null) return null;
-
-            // Determinar el ClienteId, ya sea utilizando uno existente o creando uno nuevo
-            string? clienteId = null;
+            // Determinar el ClienteId, debe ser proporcionado directamente
+            string clienteId;
             
             if (!string.IsNullOrEmpty(dto.ClienteId))
             {
                 // Usar el cliente existente
                 clienteId = dto.ClienteId;
             }
-
-            // Validar si el cliente existe
-            if (!string.IsNullOrEmpty(clienteId))
-            {
-                var cliente = await _clienteRepo.GetByIdAsync(clienteId);
-                if (cliente == null)
-                {
-                    _logger.LogWarning("Cliente con ID {ClienteId} no encontrado", clienteId);
-                    return null;
-                }
-            }
             else
             {
-                _logger.LogWarning("No se proporcionó ID de cliente válido");
+                // No se proporcionó ClienteId y ahora es obligatorio
+                _logger.LogWarning("No se proporcionó ClienteId en la solicitud de reserva");
                 return null;
             }
 
             var reserva = new Reserva
             {
-                Id = Guid.NewGuid().ToString(), // Generar un ID único
+                Id = IdGenerator.GenerateId("Reserva"),
                 ClienteId = clienteId,
                 NombreEvento = dto.NombreEvento,
                 FechaEjecucion = dto.FechaEjecucion,
                 FechaRegistro = DateTime.Now,
+                TiposEvento = dto.TipoEventoId,
                 Descripcion = dto.Descripcion,
                 Estado = dto.Estado ?? "Pendiente",
                 PrecioTotal = dto.PrecioTotal ?? 0,
-                TiposEvento = dto.TipoEventoId,
                 ServicioId = dto.ServicioId,
                 PrecioAdelanto = dto.PrecioAdelanto
             };
 
             var creada = await _reservaRepo.CreateAsync(reserva);
             
-            // Recargar la reserva con todas sus relaciones
             var reservaCompleta = await _reservaRepo.GetByIdAsync(creada.Id);
             return reservaCompleta == null ? null : MapToDTO(reservaCompleta);
         }
 
-        public async Task<ReservaResponseDTO?> UpdateAsync(string correo, string id, ReservaUpdateDTO dto)
+        public async Task<ReservaResponseDTO?> UpdateAsync(Guid id, ReservaUpdateDTO dto)
         {
-            var reserva = await _reservaRepo.GetByIdAndCorreoAsync(id, correo);
+            var reserva = await _reservaRepo.GetByIdAsync(id.ToString());
             if (reserva == null) return null;
 
             if (dto.NombreEvento != null) reserva.NombreEvento = dto.NombreEvento;
@@ -123,46 +111,91 @@ namespace back_end.Modules.reservas.Services
             if (dto.PrecioAdelanto.HasValue) reserva.PrecioAdelanto = dto.PrecioAdelanto;
             
             var actualizada = await _reservaRepo.UpdateAsync(reserva);
-            
-            // Recargar la reserva con todas sus relaciones
             var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
             return reservaCompleta == null ? null : MapToDTO(reservaCompleta);
         }
 
-        public async Task<bool> DeleteAsync(string correo, string id)
+        public async Task<bool> DeleteAsync(Guid id)
         {
-            var reserva = await _reservaRepo.GetByIdAndCorreoAsync(id, correo);
+            var reserva = await _reservaRepo.GetByIdAsync(id.ToString());
             if (reserva == null) return false;
             
             return await _reservaRepo.DeleteAsync(reserva);
         }
         
-        public async Task<List<TipoEventoDTO>> GetAllTiposEventoAsync()
+        public async Task<bool> AddServicioToReservaAsync(Guid reservaId, Guid servicioId)
         {
-            var tiposEvento = await _reservaRepo.GetAllTiposEventoAsync();
-            return tiposEvento.Select(te => new TipoEventoDTO
-            {
-                Id = te.Id,
-                Nombre = te.Nombre,
-                Descripcion = te.Descripcion
-            }).ToList();
+            var reserva = await _reservaRepo.GetByIdAsync(reservaId.ToString());
+            if (reserva == null) return false;
+            
+            // Como no hay ReservaServicios en el modelo actual, simplemente actualizamos el ServicioId
+            reserva.ServicioId = servicioId;
+            await _reservaRepo.UpdateAsync(reserva);
+            
+            return true;
         }
         
-        public async Task<TipoEventoDTO?> GetTipoEventoByIdAsync(Guid id)
+        public async Task<bool> RemoveServicioFromReservaAsync(Guid reservaId, Guid servicioId)
         {
-            var tipoEvento = await _reservaRepo.GetTipoEventoByIdAsync(id);
-            if (tipoEvento == null) return null;
+            var reserva = await _reservaRepo.GetByIdAsync(reservaId.ToString());
+            if (reserva == null) return false;
             
-            return new TipoEventoDTO
+            // Si el servicio actual coincide con el que queremos eliminar, lo quitamos
+            if (reserva.ServicioId == servicioId)
             {
-                Id = tipoEvento.Id,
-                Nombre = tipoEvento.Nombre,
-                Descripcion = tipoEvento.Descripcion
-            };
+                reserva.ServicioId = null;
+                await _reservaRepo.UpdateAsync(reserva);
+            }
+            
+            return true;
+        }
+        
+        public async Task<bool> UpdateServicioInReservaAsync(Guid reservaId, Guid servicioId, int cantidad, decimal? precio)
+        {
+            var reserva = await _reservaRepo.GetByIdAsync(reservaId.ToString());
+            if (reserva == null) return false;
+            
+            // Como no hay cantidad en el modelo actual, solo podemos actualizar el ServicioId y tal vez el precio total
+            reserva.ServicioId = servicioId;
+            if (precio.HasValue)
+            {
+                reserva.PrecioTotal = precio.Value;
+            }
+            
+            await _reservaRepo.UpdateAsync(reserva);
+            return true;
+        }
+        
+        public async Task<decimal> CalcularTotalReservaAsync(Guid reservaId)
+        {
+            var reserva = await _reservaRepo.GetByIdAsync(reservaId.ToString());
+            if (reserva == null || !reserva.PrecioTotal.HasValue) return 0;
+            
+            return reserva.PrecioTotal.Value;
         }
 
-        private ReservaResponseDTO MapToDTO(Reserva r)
-        {            var dto = new ReservaResponseDTO
+        public async Task<bool> ReplaceServicioInReservaAsync(Guid reservaId, Guid oldServicioId, Guid newServicioId, int? cantidad, decimal? precio)
+        {
+            var reserva = await _reservaRepo.GetByIdAsync(reservaId.ToString());
+            if (reserva == null) return false;
+
+            // Si el servicio actual coincide con el que queremos reemplazar, actualizamos
+            if (reserva.ServicioId == oldServicioId)
+            {
+                reserva.ServicioId = newServicioId;
+                if (precio.HasValue)
+                {
+                    reserva.PrecioTotal = precio.Value;
+                }
+                
+                await _reservaRepo.UpdateAsync(reserva);
+                return true;
+            }
+            
+            return false;
+        }        private ReservaResponseDTO MapToDTO(Reserva r)
+        {
+            var dto = new ReservaResponseDTO
             {
                 Id = r.Id,
                 NombreEvento = r.NombreEvento,
@@ -172,36 +205,56 @@ namespace back_end.Modules.reservas.Services
                 Estado = r.Estado,
                 PrecioTotal = r.PrecioTotal,
                 ClienteId = r.ClienteId,
-                NombreCliente = r.Cliente?.Usuario?.Nombre,
-                CorreoCliente = r.Cliente?.Usuario?.Correo,
-                TelefonoCliente = r.Cliente?.Usuario?.Celular,
                 TipoEventoId = r.TiposEvento,
                 TipoEventoNombre = r.TiposEventoNavigation?.Nombre,
                 ServicioId = r.ServicioId,
                 NombreServicio = r.Servicio?.Nombre,
                 PrecioAdelanto = r.PrecioAdelanto
-            };            if (r.Pagos != null && r.Pagos.Any())
+            };
+            
+            // Intentar acceder a los campos del cliente de manera segura
+            if (r.Cliente != null)
             {
-                // Sumar los montos de los pagos
-                decimal totalPagado = 0;
-                
-                foreach (var pago in r.Pagos)
-                {
-                    // Intentar parsear el monto a decimal si es un string
-                    if (pago.Monto != null && decimal.TryParse(pago.Monto, out decimal montoDecimal))
-                    {
-                        totalPagado += montoDecimal;
-                    }
+                try {
+                    var propNombre = r.Cliente.GetType().GetProperty("Nombre");
+                    if (propNombre != null) dto.NombreCliente = propNombre.GetValue(r.Cliente)?.ToString();
+                    
+                    var propCorreo = r.Cliente.GetType().GetProperty("CorreoElectronico");
+                    if (propCorreo != null) dto.CorreoCliente = propCorreo.GetValue(r.Cliente)?.ToString();
+                    
+                    var propTelefono = r.Cliente.GetType().GetProperty("Telefono");
+                    if (propTelefono != null) dto.TelefonoCliente = propTelefono.GetValue(r.Cliente)?.ToString();
+                } catch (Exception) {
+                    // Ignoramos errores de reflexión aquí
                 }
-                
-                dto.TotalPagado = totalPagado;
-                
-                // No hay campo de fecha en el modelo Pago, así que usamos la fecha de registro de la reserva
-                // como último pago, ya que no tenemos otra referencia temporal
-                dto.UltimoPago = r.FechaRegistro;
             }
-
+            
             return dto;
+        }
+        
+        // Implementación de métodos para TiposEvento
+        public async Task<List<TipoEventoResponseDTO>> GetAllTiposEventoAsync()
+        {
+            var tiposEvento = await _reservaRepo.GetAllTiposEventoAsync();
+            return tiposEvento.Select(te => new TipoEventoResponseDTO
+            {
+                Id = te.Id,
+                Nombre = te.Nombre,
+                Descripcion = te.Descripcion
+            }).ToList();
+        }
+
+        public async Task<TipoEventoResponseDTO?> GetTipoEventoByIdAsync(Guid id)
+        {
+            var tipoEvento = await _reservaRepo.GetTipoEventoByIdAsync(id);
+            if (tipoEvento == null) return null;
+            
+            return new TipoEventoResponseDTO
+            {
+                Id = tipoEvento.Id,
+                Nombre = tipoEvento.Nombre,
+                Descripcion = tipoEvento.Descripcion
+            };
         }
     }
 }

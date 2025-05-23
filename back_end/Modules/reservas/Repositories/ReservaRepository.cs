@@ -4,18 +4,17 @@ using Microsoft.EntityFrameworkCore;
 using back_end.Core.Utils;
 
 namespace back_end.Modules.reservas.Repositories
-{
+{    
     public interface IReservaRepository
     {
         Task<List<Reserva>> GetAllAsync();
-        Task<List<Reserva>> GetByCorreoUsuarioAsync(string correo);
         Task<Reserva?> GetByIdAsync(string id);
-        Task<Reserva?> GetByIdAndCorreoAsync(string id, string correo);
         Task<Reserva> CreateAsync(Reserva reserva);
         Task<Reserva> UpdateAsync(Reserva reserva);
         Task<bool> DeleteAsync(Reserva reserva);
         Task<List<TiposEvento>> GetAllTiposEventoAsync();
         Task<TiposEvento?> GetTipoEventoByIdAsync(Guid id);
+        Task<List<Reserva>> GetByClienteIdAsync(string clienteId);
     }
 
     public class ReservaRepository : IReservaRepository
@@ -37,21 +36,14 @@ namespace back_end.Modules.reservas.Repositories
                 .ToListAsync();
         }
 
-        public async Task<List<Reserva>> GetByCorreoUsuarioAsync(string correo)
+        public async Task<List<Reserva>> GetByClienteIdAsync(string clienteId)
         {
-            var clientes = await _context.Clientes
-                .Include(c => c.Usuario)
-                .Where(c => c.Usuario != null && c.Usuario.Correo == correo)
-                .Select(c => c.Id)
-                .ToListAsync();
-
             return await _context.Reservas
                 .Include(r => r.Cliente)
-                    .ThenInclude(c => c!.Usuario)
                 .Include(r => r.Servicio)
                 .Include(r => r.TiposEventoNavigation)
                 .Include(r => r.Pagos)
-                .Where(r => clientes.Contains(r.ClienteId!))
+                .Where(r => r.ClienteId == clienteId)
                 .ToListAsync();
         }
 
@@ -65,22 +57,7 @@ namespace back_end.Modules.reservas.Repositories
                 .FirstOrDefaultAsync(r => r.Id == id);
         }
 
-        public async Task<Reserva?> GetByIdAndCorreoAsync(string id, string correo)
-        {
-            var clientes = await _context.Clientes
-                .Include(c => c.Usuario)
-                .Where(c => c.Usuario != null && c.Usuario.Correo == correo)
-                .Select(c => c.Id)
-                .ToListAsync();
-
-            return await _context.Reservas
-                .Include(r => r.Cliente)
-                    .ThenInclude(c => c!.Usuario)
-                .Include(r => r.Servicio)
-                .Include(r => r.TiposEventoNavigation)
-                .Include(r => r.Pagos)
-                .FirstOrDefaultAsync(r => r.Id == id && clientes.Contains(r.ClienteId!));
-        }        public async Task<Reserva> CreateAsync(Reserva reserva)
+        public async Task<Reserva> CreateAsync(Reserva reserva)
         {
             // Asignar un ID personalizado usando nuestro generador
             if (string.IsNullOrEmpty(reserva.Id))

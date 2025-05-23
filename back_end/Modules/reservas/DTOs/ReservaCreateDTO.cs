@@ -1,6 +1,5 @@
 namespace back_end.Modules.reservas.DTOs
-{
-    public class ReservaCreateDTO
+{    public class ReservaCreateDTO
     {
         public string? NombreEvento { get; set; }
         public DateOnly? FechaEjecucion { get; set; }
@@ -8,6 +7,7 @@ namespace back_end.Modules.reservas.DTOs
         public string? Estado { get; set; }
         public decimal? PrecioTotal { get; set; }
         public string? ClienteId { get; set; }
+        // Eliminados los campos relacionados con correo
         public Guid? TipoEventoId { get; set; }
         public Guid? ServicioId { get; set; }
         public double? PrecioAdelanto { get; set; }
