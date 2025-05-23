@@ -92,7 +92,7 @@ namespace back_end.Modules.Item.Repositories
             await _context.SaveChangesAsync();
             return true;
         }
-
+        
         public async Task<List<Models.Item>> GetByStockBelowMinAsync(int minStock)
         {
             return await _context.Items

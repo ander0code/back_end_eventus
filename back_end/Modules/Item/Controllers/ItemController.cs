@@ -19,6 +19,7 @@ namespace back_end.Modules.Item.Controllers
             _logger = logger;
         }
 
+        /// Obtener todos los items
         [HttpGet]
         public async Task<IActionResult> GetAll()
         {
@@ -35,6 +36,7 @@ namespace back_end.Modules.Item.Controllers
             }
         }
 
+        /// Crear item
         [HttpPost]
         public async Task<IActionResult> Create([FromBody] ItemCreateDTO dto)
         {
@@ -60,6 +62,7 @@ namespace back_end.Modules.Item.Controllers
             }
         }
 
+        /// Actualizar item por ID
         [HttpPut("{id:guid}")]
         public async Task<IActionResult> Update(Guid id, [FromBody] ItemUpdateDTO dto)
         {
@@ -81,6 +84,7 @@ namespace back_end.Modules.Item.Controllers
             }
         }
 
+        /// Eliminar item por ID
         [HttpDelete("{id:guid}")]
         public async Task<IActionResult> Delete(Guid id)
         {

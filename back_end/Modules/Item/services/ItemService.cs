@@ -1,11 +1,5 @@
 using back_end.Modules.Item.DTOs;
-using back_end.Modules.Item.Models;
 using back_end.Modules.Item.Repositories;
-using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 
 namespace back_end.Modules.Item.Services
 {
@@ -30,7 +24,8 @@ namespace back_end.Modules.Item.Services
             _repository = repository;
             _logger = logger;
         }
-
+        
+        ///  Obtener todos los items
         public async Task<List<ItemResponseDTO>> GetAllAsync()
         {
             try
@@ -59,6 +54,7 @@ namespace back_end.Modules.Item.Services
             }
         }
 
+        ///  Crear item
         public async Task<ItemResponseDTO?> CreateAsync(ItemCreateDTO dto)
         {
             try
@@ -81,7 +77,8 @@ namespace back_end.Modules.Item.Services
                 return null;
             }
         }
-
+        
+        ///  Actualizar item
         public async Task<ItemResponseDTO?> UpdateAsync(Guid id, ItemUpdateDTO dto)
         {
             try
@@ -104,6 +101,7 @@ namespace back_end.Modules.Item.Services
             }
         }
 
+        ///  Eliminar item
         public async Task<bool> DeleteAsync(Guid id)
         {
             try
@@ -120,14 +118,14 @@ namespace back_end.Modules.Item.Services
             }
         }
 
+        ///  Buscar items por nombre
         public async Task<List<ItemResponseDTO>> SearchByNameAsync(string term)
         {
             try
             {
-                // Implementar esta funcionalidad en el repositorio si es necesario
                 var items = await _repository.GetAllAsync();
                 var filtered = items
-                    .Where(i => i.Nombre != null && 
+                    .Where(i => i.Nombre != null &&
                            i.Nombre.Contains(term, StringComparison.OrdinalIgnoreCase))
                     .ToList();
                 return filtered.Select(MapToDTO).ToList();
@@ -139,6 +137,7 @@ namespace back_end.Modules.Item.Services
             }
         }
 
+        ///  actualizar stock
         public async Task<bool> UpdateStockAsync(Guid id, int newStock)
         {
             try
