@@ -7,7 +7,7 @@ namespace back_end.Modules.clientes.Repositories
     public interface IClienteRepository
     {
         Task<List<Cliente>> GetByCorreoUsuarioAsync(string correoUsuario);
-        Task<Cliente?> GetByIdAsync(Guid id);
+        Task<Cliente?> GetByIdAsync(string id);
         Task<Cliente> CreateAsync(Cliente cliente);
         Task<Cliente> UpdateAsync(Cliente cliente);
         Task<bool> DeleteAsync(Cliente cliente);
@@ -20,20 +20,21 @@ namespace back_end.Modules.clientes.Repositories
         public ClienteRepository(DbEventusContext context)
         {
             _context = context;
-        }
-
-        public async Task<List<Cliente>> GetByCorreoUsuarioAsync(string correoUsuario)
+        }        public async Task<List<Cliente>> GetByCorreoUsuarioAsync(string correoUsuario)
         {
             return await _context.Clientes
                 .Include(c => c.Usuario)
                 .Include(c => c.Reservas) 
-                .Where(c => c.Usuario.CorreoElectronico == correoUsuario)
+                .Where(c => c.Usuario != null && c.Usuario.Correo == correoUsuario)
                 .ToListAsync();
         }
 
-        public async Task<Cliente?> GetByIdAsync(Guid id)
+        public async Task<Cliente?> GetByIdAsync(string id)
         {
-            return await _context.Clientes.FindAsync(id);
+            return await _context.Clientes
+                .Include(c => c.Usuario)
+                .Include(c => c.Reservas)
+                .FirstOrDefaultAsync(c => c.Id == id);
         }
 
         public async Task<Cliente> CreateAsync(Cliente cliente)

@@ -29,7 +29,6 @@ namespace back_end.Modules.Auth.Services
 
         public AuthResponseDTO Authenticate(AuthRequestDTO request)
         {
-
             var user = _userRepository.GetUserByEmail(request.Email);
 
             if (user == null)
@@ -52,7 +51,7 @@ namespace back_end.Modules.Auth.Services
             {
                 Email = user.Correo,
                 Token = token,
-                UserId = user.Id,
+                UserId = Guid.Parse(user.Id),
                 Nombre = user.Nombre,
                 Apellido = user.Apellido
             };
@@ -60,7 +59,6 @@ namespace back_end.Modules.Auth.Services
 
         public async Task<RegisterResponseDTO> Register(RegisterRequestDTO request)
         {
-
             if (await _userRepository.ExistsByEmail(request.Email))
             {
                 _logger.LogWarning("Intento de registro fallido: Email ya existe: {Email}", request.Email);
@@ -75,7 +73,7 @@ namespace back_end.Modules.Auth.Services
 
             return new RegisterResponseDTO
             {
-                UserId = newUser.Id,
+                UserId = Guid.Parse(newUser.Id),
                 Email = newUser.Correo,
                 Token = token,
                 Nombre = newUser.Nombre,
@@ -92,7 +90,6 @@ namespace back_end.Modules.Auth.Services
                 
                 if (storedHash.StartsWith("$2a$") || storedHash.StartsWith("$2b$") || storedHash.StartsWith("$2y$"))
                 {
-
                     bool result = BCrypt.Net.BCrypt.Verify(password, storedHash);
                     _logger.LogDebug("Verificación BCrypt: {Result}", result ? "Exitosa" : "Fallida");
                     return result;
@@ -131,7 +128,7 @@ namespace back_end.Modules.Auth.Services
             
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Correo),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim("name", $"{user.Nombre} {user.Apellido}")

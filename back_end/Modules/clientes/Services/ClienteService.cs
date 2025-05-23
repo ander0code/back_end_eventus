@@ -1,6 +1,7 @@
 using back_end.Modules.clientes.DTOs;
 using back_end.Modules.clientes.Models;
 using back_end.Modules.clientes.Repositories;
+using back_end.Modules.organizador.Models;
 using back_end.Modules.usuarios.Repositories;
 
 namespace back_end.Modules.clientes.Services
@@ -9,8 +10,8 @@ namespace back_end.Modules.clientes.Services
     {
         Task<List<ClienteResponseDTO>> GetByUsuarioCorreoAsync(string correo);
         Task<ClienteResponseDTO?> CreateAsync(string correo, ClienteCreateDTO dto);
-        Task<ClienteResponseDTO?> UpdateAsync(Guid id, ClienteUpdateDTO dto);
-        Task<bool> DeleteAsync(Guid id);
+        Task<ClienteResponseDTO?> UpdateAsync(string id, ClienteUpdateDTO dto);
+        Task<bool> DeleteAsync(string id);
     }
 
     public class ClienteService : IClienteService
@@ -37,35 +38,33 @@ namespace back_end.Modules.clientes.Services
 
             var cliente = new Cliente
             {
+                Id = Guid.NewGuid().ToString(),
                 UsuarioId = usuario.Id,
                 TipoCliente = dto.TipoCliente,
-                Nombre = dto.Nombre,
-                CorreoElectronico = dto.CorreoElectronico,
-                Telefono = dto.Telefono,
                 Direccion = dto.Direccion,
-                FechaRegistro = DateTime.UtcNow
+                Ruc = dto.Ruc,
+                RazonSocial = dto.RazonSocial
             };
 
             var creado = await _repository.CreateAsync(cliente);
             return MapToDTO(creado);
         }
 
-        public async Task<ClienteResponseDTO?> UpdateAsync(Guid id, ClienteUpdateDTO dto)
+        public async Task<ClienteResponseDTO?> UpdateAsync(string id, ClienteUpdateDTO dto)
         {
             var cliente = await _repository.GetByIdAsync(id);
             if (cliente == null) return null;
 
             cliente.TipoCliente = dto.TipoCliente ?? cliente.TipoCliente;
-            cliente.Nombre = dto.Nombre ?? cliente.Nombre;
-            cliente.CorreoElectronico = dto.CorreoElectronico ?? cliente.CorreoElectronico;
-            cliente.Telefono = dto.Telefono ?? cliente.Telefono;
             cliente.Direccion = dto.Direccion ?? cliente.Direccion;
+            cliente.Ruc = dto.Ruc ?? cliente.Ruc;
+            cliente.RazonSocial = dto.RazonSocial ?? cliente.RazonSocial;
 
             var actualizado = await _repository.UpdateAsync(cliente);
             return MapToDTO(actualizado);
         }
 
-        public async Task<bool> DeleteAsync(Guid id)
+        public async Task<bool> DeleteAsync(string id)
         {
             var cliente = await _repository.GetByIdAsync(id);
             if (cliente == null) return false;
@@ -77,15 +76,16 @@ namespace back_end.Modules.clientes.Services
         {
             Id = c.Id,
             TipoCliente = c.TipoCliente,
-            Nombre = c.Nombre,
-            CorreoElectronico = c.CorreoElectronico,
-            Telefono = c.Telefono,
             Direccion = c.Direccion,
-            FechaRegistro = c.FechaRegistro,
+            Ruc = c.Ruc,
+            RazonSocial = c.RazonSocial,
+            UsuarioId = c.UsuarioId,
+            NombreUsuario = c.Usuario != null ? $"{c.Usuario.Nombre} {c.Usuario.Apellido}" : string.Empty,
+            CorreoUsuario = c.Usuario?.Correo,
             TotalReservas = c.Reservas.Count,
             UltimaFechaReserva = c.Reservas
-                .OrderByDescending(r => r.FechaEvento)
-                .Select(r => r.FechaEvento)
+                .OrderByDescending(r => r.FechaEjecucion)
+                .Select(r => r.FechaEjecucion)
                 .FirstOrDefault()
         };
     }

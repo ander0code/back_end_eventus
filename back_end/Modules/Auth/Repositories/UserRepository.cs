@@ -1,7 +1,8 @@
 using back_end.Core.Data;
 using back_end.Modules.Auth.DTOs;
-using back_end.Modules.usuarios.Models;
+using back_end.Modules.organizador.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
 
 namespace back_end.Modules.Auth.Repositories
 {
@@ -23,67 +24,77 @@ namespace back_end.Modules.Auth.Repositories
 
         public UsuarioAuthDTO? GetUserByEmail(string email)
         {
-
-            var usuario = _context.Usuarios.FirstOrDefault(u => u.CorreoElectronico == email);
+            // Primero buscamos el usuario por correo
+            var usuario = _context.Usuarios
+                .Include(u => u.Organizadors)
+                .FirstOrDefault(u => u.Correo == email);
             
             if (usuario == null)
+                return null;
+
+            // Ahora buscamos el organizador asociado para obtener la contraseña
+            var organizador = usuario.Organizadors.FirstOrDefault();
+            
+            if (organizador == null)
                 return null;
 
             return new UsuarioAuthDTO
             {
                 Id = usuario.Id,
-                Correo = usuario.CorreoElectronico,
-                ContrasenaHash = usuario.Contrasena,
+                Correo = usuario.Correo ?? string.Empty,
+                ContrasenaHash = organizador.Contrasena ?? string.Empty,
                 Nombre = usuario.Nombre ?? string.Empty,
-                Apellido = usuario.Apellido ?? string.Empty,
-                Verificado = usuario.Verificado
+                Apellido = usuario.Apellido ?? string.Empty
             };
         }
 
         public async Task<UsuarioAuthDTO> RegisterUser(RegisterRequestDTO request)
         {
-
+            string id = Guid.NewGuid().ToString();
+            
+            // Primero creamos el usuario
             var usuario = new Usuario
             {
+                Id = id,
                 Nombre = request.Nombre,
                 Apellido = request.Apellido,
-                CorreoElectronico = request.Email,
-                Celular = request.Telefono,
-                Contrasena = HashPassword(request.Password),
-                Verificado = false,
-                TokenVerificacion = GenerateVerificationToken(),
-                FechaRegistro = DateTime.Now
+                Correo = request.Email,
+                Celular = request.Telefono
             };
 
             _context.Usuarios.Add(usuario);
+            
+            // Luego creamos el organizador asociado
+            var organizador = new Organizador
+            {
+                Id = Guid.NewGuid().ToString(),
+                NombreNegocio = $"{request.Nombre}'s Business",
+                Contrasena = HashPassword(request.Password),
+                UsuarioId = id
+            };
+            
+            _context.Organizadors.Add(organizador);
+            
             await _context.SaveChangesAsync();
 
             return new UsuarioAuthDTO
             {
                 Id = usuario.Id,
-                Correo = usuario.CorreoElectronico,
-                ContrasenaHash = usuario.Contrasena,
+                Correo = usuario.Correo ?? string.Empty,
+                ContrasenaHash = organizador.Contrasena ?? string.Empty,
                 Nombre = usuario.Nombre ?? string.Empty,
-                Apellido = usuario.Apellido ?? string.Empty,
-                Verificado = usuario.Verificado
+                Apellido = usuario.Apellido ?? string.Empty
             };
         }
 
         public async Task<bool> ExistsByEmail(string email)
         {
-            return await _context.Usuarios.AnyAsync(u => u.CorreoElectronico == email);
+            return await _context.Usuarios.AnyAsync(u => u.Correo == email);
         }
 
         private string HashPassword(string password)
         {
-
             return BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
-        }
-
-        private string GenerateVerificationToken()
-        {
-
-            return Guid.NewGuid().ToString();
         }
     }
 }

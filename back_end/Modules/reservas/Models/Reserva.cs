@@ -1,18 +1,17 @@
 ﻿namespace back_end.Modules.reservas.Models;
-using back_end.Modules.clientes.Models; 
-using back_end.Modules.usuarios.Models;
+using back_end.Modules.clientes.Models;
+using back_end.Modules.pagos.Models;
+using back_end.Modules.servicios.Models;
 
 public partial class Reserva
 {
-    public Guid Id { get; set; }
+    public string Id { get; set; } = null!;
 
     public string? NombreEvento { get; set; }
 
-    public DateOnly? FechaEvento { get; set; }
+    public DateOnly? FechaEjecucion { get; set; }
 
-    public string? HoraEvento { get; set; }
-
-    public string? TipoEvento { get; set; }
+    public DateTime? FechaRegistro { get; set; }
 
     public string? Descripcion { get; set; }
 
@@ -20,13 +19,19 @@ public partial class Reserva
 
     public decimal? PrecioTotal { get; set; }
 
-    public Guid UsuarioId { get; set; }
+    public Guid? TiposEvento { get; set; }
 
-    public Guid ClienteId { get; set; }
+    public string? ClienteId { get; set; }
 
-    public virtual Cliente Cliente { get; set; } = null!;
+    public Guid? ServicioId { get; set; }
 
-    public virtual ICollection<ReservaServicio> ReservaServicios { get; set; } = new List<ReservaServicio>();
+    public double? PrecioAdelanto { get; set; }
 
-    public virtual Usuario Usuario { get; set; } = null!;
+    public virtual Cliente? Cliente { get; set; }
+
+    public virtual ICollection<Pago> Pagos { get; set; } = new List<Pago>();
+
+    public virtual Servicio? Servicio { get; set; }
+
+    public virtual TiposEvento? TiposEventoNavigation { get; set; }
 }
