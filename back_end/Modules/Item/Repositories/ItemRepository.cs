@@ -64,7 +64,7 @@ namespace back_end.Modules.Item.Repositories
             return item;
         }
         
-        
+        // Método auxiliar para crear un Guid determinístico a partir de un string
         private Guid CreateDeterministicGuid(string input)
         {
             // Usar MD5 para crear un hash determinístico (para este caso es aceptable)

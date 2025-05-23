@@ -1,7 +1,9 @@
 using back_end.Modules.clientes.DTOs;
 using back_end.Modules.clientes.Models;
 using back_end.Modules.clientes.Repositories;
-using back_end.Modules.usuarios.Repositories;
+using back_end.Modules.organizador.Models;
+using back_end.Modules.organizador.Repositories;
+using back_end.Core.Utils;
 
 namespace back_end.Modules.clientes.Services
 {
@@ -9,10 +11,8 @@ namespace back_end.Modules.clientes.Services
     {
         Task<List<ClienteResponseDTO>> GetByUsuarioCorreoAsync(string correo);
         Task<ClienteResponseDTO?> CreateAsync(string correo, ClienteCreateDTO dto);
-        Task<ClienteResponseDTO?> UpdateAsync(Guid id, ClienteUpdateDTO dto);
-        Task<bool> DeleteAsync(Guid id);
-        Task<List<ClienteResponseDTO>> SearchAsync(string? query);
-        Task<List<ClienteResponseDTO>> FilterByTipoClienteAsync(string tipoCliente);
+        Task<ClienteResponseDTO?> UpdateAsync(string id, ClienteUpdateDTO dto);
+        Task<bool> DeleteAsync(string id);
     }
 
     public class ClienteService : IClienteService
@@ -30,44 +30,65 @@ namespace back_end.Modules.clientes.Services
         {
             var clientes = await _repository.GetByCorreoUsuarioAsync(correo);
             return clientes.Select(MapToDTO).ToList();
-        }
-
-        public async Task<ClienteResponseDTO?> CreateAsync(string correo, ClienteCreateDTO dto)
+        }        public async Task<ClienteResponseDTO?> CreateAsync(string correo, ClienteCreateDTO dto)
         {
-            var usuario = await _usuarioRepository.GetByCorreoAsync(correo);
-            if (usuario == null) return null;
+            // Primero verificamos si existe el usuario organizador que está creando al cliente
+            var organizador = await _usuarioRepository.GetByCorreoAsync(correo);
+            if (organizador == null) return null;
+            
+            // Luego verificamos si ya existe un usuario con el correo proporcionado
+            Usuario? clienteUsuario = null;
+            if (!string.IsNullOrEmpty(dto.CorreoElectronico))
+            {
+                clienteUsuario = await _usuarioRepository.GetByCorreoAsync(dto.CorreoElectronico);
+            }
+            
+            if (clienteUsuario == null)
+            {
+                // Si no existe, creamos un nuevo usuario para el cliente
+                clienteUsuario = new Usuario
+                {
+                    Id = IdGenerator.GenerateId("Usuario"),
+                    Nombre = dto.Nombre,
+                    Apellido = null, // Como indicaste, lo dejamos nulo
+                    Correo = dto.CorreoElectronico,
+                    Celular = dto.Telefono
+                };
+                
+                // Guardamos el nuevo usuario
+                clienteUsuario = await _usuarioRepository.CreateAsync(clienteUsuario);
+            }
 
+            // Ahora creamos el cliente asociado al usuario
             var cliente = new Cliente
             {
-                UsuarioId = usuario.Id,
+                Id = IdGenerator.GenerateId("Cliente"),
+                UsuarioId = clienteUsuario.Id,
                 TipoCliente = dto.TipoCliente,
-                Nombre = dto.Nombre,
-                CorreoElectronico = dto.CorreoElectronico,
-                Telefono = dto.Telefono,
                 Direccion = dto.Direccion,
-                FechaRegistro = DateTime.UtcNow
+                Ruc = dto.Ruc,
+                RazonSocial = dto.RazonSocial
             };
 
             var creado = await _repository.CreateAsync(cliente);
             return MapToDTO(creado);
         }
 
-        public async Task<ClienteResponseDTO?> UpdateAsync(Guid id, ClienteUpdateDTO dto)
+        public async Task<ClienteResponseDTO?> UpdateAsync(string id, ClienteUpdateDTO dto)
         {
             var cliente = await _repository.GetByIdAsync(id);
             if (cliente == null) return null;
 
             cliente.TipoCliente = dto.TipoCliente ?? cliente.TipoCliente;
-            cliente.Nombre = dto.Nombre ?? cliente.Nombre;
-            cliente.CorreoElectronico = dto.CorreoElectronico ?? cliente.CorreoElectronico;
-            cliente.Telefono = dto.Telefono ?? cliente.Telefono;
             cliente.Direccion = dto.Direccion ?? cliente.Direccion;
+            cliente.Ruc = dto.Ruc ?? cliente.Ruc;
+            cliente.RazonSocial = dto.RazonSocial ?? cliente.RazonSocial;
 
             var actualizado = await _repository.UpdateAsync(cliente);
             return MapToDTO(actualizado);
         }
 
-        public async Task<bool> DeleteAsync(Guid id)
+        public async Task<bool> DeleteAsync(string id)
         {
             var cliente = await _repository.GetByIdAsync(id);
             if (cliente == null) return false;
@@ -75,31 +96,20 @@ namespace back_end.Modules.clientes.Services
             return await _repository.DeleteAsync(cliente);
         }
 
-        public async Task<List<ClienteResponseDTO>> SearchAsync(string? query)
-        {
-            var clientes = await _repository.SearchAsync(query);
-            return clientes.Select(MapToDTO).ToList();
-        }
-
-        public async Task<List<ClienteResponseDTO>> FilterByTipoClienteAsync(string tipoCliente)
-        {
-            var clientes = await _repository.FilterByTipoClienteAsync(tipoCliente);
-            return clientes.Select(MapToDTO).ToList();
-        }
-
         private ClienteResponseDTO MapToDTO(Cliente c) => new ClienteResponseDTO
         {
             Id = c.Id,
             TipoCliente = c.TipoCliente,
-            Nombre = c.Nombre,
-            CorreoElectronico = c.CorreoElectronico,
-            Telefono = c.Telefono,
             Direccion = c.Direccion,
-            FechaRegistro = c.FechaRegistro,
+            Ruc = c.Ruc,
+            RazonSocial = c.RazonSocial,
+            UsuarioId = c.UsuarioId,
+            NombreUsuario = c.Usuario != null ? $"{c.Usuario.Nombre} {c.Usuario.Apellido}" : string.Empty,
+            CorreoUsuario = c.Usuario?.Correo,
             TotalReservas = c.Reservas.Count,
             UltimaFechaReserva = c.Reservas
-                .OrderByDescending(r => r.FechaEvento)
-                .Select(r => r.FechaEvento)
+                .OrderByDescending(r => r.FechaEjecucion)
+                .Select(r => r.FechaEjecucion)
                 .FirstOrDefault()
         };
     }

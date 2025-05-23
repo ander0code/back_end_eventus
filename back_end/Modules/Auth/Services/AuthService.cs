@@ -29,34 +29,29 @@ namespace back_end.Modules.Auth.Services
 
         public AuthResponseDTO Authenticate(AuthRequestDTO request)
         {
-            // Buscar el usuario por correo electrónico
             var user = _userRepository.GetUserByEmail(request.Email);
-            
-            // Si el usuario no existe, lanzar excepción específica para el correo
+
             if (user == null)
             {
                 _logger.LogWarning("Intento de login fallido: Usuario no encontrado: {Email}", request.Email);
                 throw new UnauthorizedAccessException("El correo electrónico no está registrado en el sistema");
             }
             
-            // Si el usuario existe pero la contraseña no coincide
             if (!VerifyPasswordHash(request.Password, user.ContrasenaHash))
             {
                 _logger.LogWarning("Intento de login fallido: Contraseña incorrecta para: {Email}", request.Email);
                 throw new UnauthorizedAccessException("La contraseña ingresada es incorrecta");
             }
 
-            // Si llegamos aquí, la autenticación fue exitosa
             var token = GenerateJwtToken(user);
-            
-            // Registramos el éxito
+
             _logger.LogInformation("Login exitoso para: {Email}", request.Email);
 
             return new AuthResponseDTO
             {
                 Email = user.Correo,
                 Token = token,
-                UserId = user.Id,
+                UserId = Guid.Parse(user.Id),
                 Nombre = user.Nombre,
                 Apellido = user.Apellido
             };
@@ -64,25 +59,21 @@ namespace back_end.Modules.Auth.Services
 
         public async Task<RegisterResponseDTO> Register(RegisterRequestDTO request)
         {
-            // Verificar si el usuario ya existe
             if (await _userRepository.ExistsByEmail(request.Email))
             {
                 _logger.LogWarning("Intento de registro fallido: Email ya existe: {Email}", request.Email);
                 throw new InvalidOperationException("El correo electrónico ya está registrado");
             }
 
-            // Registrar al usuario
             var newUser = await _userRepository.RegisterUser(request);
             _logger.LogInformation("Usuario registrado correctamente: {Email}", request.Email);
             
-            // Generar token para el usuario recién registrado
             var token = GenerateJwtToken(newUser);
             _logger.LogInformation("Token generado para usuario nuevo: {Email}", request.Email);
 
-            // Retornar la respuesta con el token
             return new RegisterResponseDTO
             {
-                UserId = newUser.Id,
+                UserId = Guid.Parse(newUser.Id),
                 Email = newUser.Correo,
                 Token = token,
                 Nombre = newUser.Nombre,
@@ -97,10 +88,8 @@ namespace back_end.Modules.Auth.Services
                 _logger.LogDebug("Verificando contraseña para hash: {HashPrefix}...", 
                     storedHash.Length > 10 ? storedHash.Substring(0, 10) + "..." : storedHash);
                 
-                // Primero intentamos verificar con BCrypt
                 if (storedHash.StartsWith("$2a$") || storedHash.StartsWith("$2b$") || storedHash.StartsWith("$2y$"))
                 {
-                    // Es un hash BCrypt
                     bool result = BCrypt.Net.BCrypt.Verify(password, storedHash);
                     _logger.LogDebug("Verificación BCrypt: {Result}", result ? "Exitosa" : "Fallida");
                     return result;
@@ -139,7 +128,7 @@ namespace back_end.Modules.Auth.Services
             
             var claims = new[]
             {
-                new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
+                new Claim(JwtRegisteredClaimNames.Sub, user.Id),
                 new Claim(JwtRegisteredClaimNames.Email, user.Correo),
                 new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
                 new Claim("name", $"{user.Nombre} {user.Apellido}")

@@ -1,7 +1,9 @@
 using back_end.Core.Data;
 using back_end.Modules.Auth.DTOs;
-using back_end.Modules.usuarios.Models;
+using back_end.Modules.organizador.Models;
 using Microsoft.EntityFrameworkCore;
+using System;
+using back_end.Core.Utils;
 
 namespace back_end.Modules.Auth.Repositories
 {
@@ -23,71 +25,76 @@ namespace back_end.Modules.Auth.Repositories
 
         public UsuarioAuthDTO? GetUserByEmail(string email)
         {
-            // Adaptamos la lógica para usar la entidad Usuario de nuestro modelo
-            var usuario = _context.Usuarios.FirstOrDefault(u => u.CorreoElectronico == email);
+            // Primero buscamos el usuario por correo
+            var usuario = _context.Usuarios
+                .Include(u => u.Organizadors)
+                .FirstOrDefault(u => u.Correo == email);
             
             if (usuario == null)
                 return null;
-                
-            // Mapeamos de Usuario a UsuarioAuthDTO
+
+            // Ahora buscamos el organizador asociado para obtener la contraseña
+            var organizador = usuario.Organizadors.FirstOrDefault();
+            
+            if (organizador == null)
+                return null;
+
             return new UsuarioAuthDTO
             {
                 Id = usuario.Id,
-                Correo = usuario.CorreoElectronico,
-                ContrasenaHash = usuario.Contrasena,
+                Correo = usuario.Correo ?? string.Empty,
+                ContrasenaHash = organizador.Contrasena ?? string.Empty,
                 Nombre = usuario.Nombre ?? string.Empty,
-                Apellido = usuario.Apellido ?? string.Empty,
-                Verificado = usuario.Verificado
+                Apellido = usuario.Apellido ?? string.Empty
             };
-        }
-
-        public async Task<UsuarioAuthDTO> RegisterUser(RegisterRequestDTO request)
+        }        public async Task<UsuarioAuthDTO> RegisterUser(RegisterRequestDTO request)
         {
-            // Crear un nuevo usuario
+            // Generar ID personalizado para Usuario
+            string userId = IdGenerator.GenerateId("Usuario");
+            
+            // Primero creamos el usuario
             var usuario = new Usuario
             {
+                Id = userId,
                 Nombre = request.Nombre,
                 Apellido = request.Apellido,
-                CorreoElectronico = request.Email,
-                Celular = request.Telefono,
-                Contrasena = HashPassword(request.Password),
-                Verificado = false,
-                TokenVerificacion = GenerateVerificationToken(),
-                FechaRegistro = DateTime.Now
+                Correo = request.Email,
+                Celular = request.Telefono
             };
 
-            // Guardar en la base de datos
             _context.Usuarios.Add(usuario);
+            
+            // Luego creamos el organizador asociado con ID personalizado
+            var organizador = new Organizador
+            {
+                Id = IdGenerator.GenerateId("Organizador"),
+                NombreNegocio = $"{request.Nombre}'s Business",
+                Contrasena = HashPassword(request.Password),
+                UsuarioId = userId
+            };
+            
+            _context.Organizadors.Add(organizador);
+            
             await _context.SaveChangesAsync();
 
-            // Retornar el DTO del usuario
             return new UsuarioAuthDTO
             {
                 Id = usuario.Id,
-                Correo = usuario.CorreoElectronico,
-                ContrasenaHash = usuario.Contrasena,
+                Correo = usuario.Correo ?? string.Empty,
+                ContrasenaHash = organizador.Contrasena ?? string.Empty,
                 Nombre = usuario.Nombre ?? string.Empty,
-                Apellido = usuario.Apellido ?? string.Empty,
-                Verificado = usuario.Verificado
+                Apellido = usuario.Apellido ?? string.Empty
             };
         }
 
         public async Task<bool> ExistsByEmail(string email)
         {
-            return await _context.Usuarios.AnyAsync(u => u.CorreoElectronico == email);
+            return await _context.Usuarios.AnyAsync(u => u.Correo == email);
         }
 
         private string HashPassword(string password)
         {
-            // Usar BCrypt para generar un hash seguro
-            // WorkFactor 12 es un buen equilibrio entre seguridad y rendimiento
             return BCrypt.Net.BCrypt.HashPassword(password, workFactor: 12);
-        }
-
-        private string GenerateVerificationToken()
-        {
-            // Generar un token aleatorio para verificación de email
-            return Guid.NewGuid().ToString();
         }
     }
 }

@@ -3,11 +3,10 @@ namespace back_end.Modules.Auth.DTOs
 {
     public class UsuarioAuthDTO
     {
-        public Guid Id { get; set; }
-        public required string Correo { get; set; }
-        public required string ContrasenaHash { get; set; }
-        public required string Nombre { get; set; }
-        public required string Apellido { get; set; }
-        public bool? Verificado { get; set; }
+        public string Id { get; set; } = null!;
+        public string Correo { get; set; } = string.Empty;
+        public string ContrasenaHash { get; set; } = string.Empty;
+        public string Nombre { get; set; } = string.Empty;
+        public string Apellido { get; set; } = string.Empty;
     }
 }

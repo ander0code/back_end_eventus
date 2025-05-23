@@ -2,12 +2,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace back_end.Core.Configurations
 {
-    /// <summary>
-    /// Clase que centraliza el acceso a todas las configuraciones sensibles de la aplicación.
-    /// Esta clase proporciona una capa de abstracción para acceder a las configuraciones 
-    /// independientemente de dónde estén almacenadas (variables de entorno, User Secrets, 
-    /// archivos de configuración, etc.).
-    /// </summary>
+
     public class AppSettings
     {
         private readonly IConfiguration _configuration;
@@ -33,9 +28,7 @@ namespace back_end.Core.Configurations
 
         #region Helpers
 
-        /// <summary>
-        /// Obtiene un valor de configuración y lanza una excepción si no está presente.
-        /// </summary>
+
         private string GetRequiredValue(string key)
         {
             var value = _configuration[key];
@@ -46,9 +39,7 @@ namespace back_end.Core.Configurations
             return value;
         }
 
-        /// <summary>
-        /// Obtiene un valor de configuración opcional o devuelve un valor por defecto.
-        /// </summary>
+  
         private string GetOptionalValue(string key, string defaultValue = "")
         {
             return _configuration[key] ?? defaultValue;
@@ -57,7 +48,7 @@ namespace back_end.Core.Configurations
         #endregion
     }
 
-    // Extensión para registrar AppSettings en la inyección de dependencias
+
     public static class AppSettingsExtensions
     {
         public static IServiceCollection AddAppSettings(this IServiceCollection services)

@@ -1,14 +1,13 @@
 using System;
 
 namespace back_end.Modules.dashboard.DTOs
-{
-    public class ProximaReservaDTO
+{    public class ProximaReservaDTO
     {
-        public Guid? Id { get; set; }
+        public string? Id { get; set; }
         public string? NombreEvento { get; set; }
-        public DateOnly? FechaEvento { get; set; }
-        public string? HoraEvento { get; set; }
+        public DateOnly? FechaEjecucion { get; set; }
         public string? Descripcion { get; set; }
+        public string? Estado { get; set; }
     }
     
     public class ProximasReservasDTO

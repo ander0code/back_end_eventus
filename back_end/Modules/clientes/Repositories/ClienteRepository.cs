@@ -1,18 +1,17 @@
 using back_end.Core.Data;
 using back_end.Modules.clientes.Models;
 using Microsoft.EntityFrameworkCore;
+using back_end.Core.Utils;
 
 namespace back_end.Modules.clientes.Repositories
 {
     public interface IClienteRepository
     {
         Task<List<Cliente>> GetByCorreoUsuarioAsync(string correoUsuario);
-        Task<Cliente?> GetByIdAsync(Guid id);
+        Task<Cliente?> GetByIdAsync(string id);
         Task<Cliente> CreateAsync(Cliente cliente);
         Task<Cliente> UpdateAsync(Cliente cliente);
         Task<bool> DeleteAsync(Cliente cliente);
-        Task<List<Cliente>> SearchAsync(string? query);
-        Task<List<Cliente>> FilterByTipoClienteAsync(string tipoCliente);
     }
 
     public class ClienteRepository : IClienteRepository
@@ -22,24 +21,29 @@ namespace back_end.Modules.clientes.Repositories
         public ClienteRepository(DbEventusContext context)
         {
             _context = context;
-        }
-
-        public async Task<List<Cliente>> GetByCorreoUsuarioAsync(string correoUsuario)
+        }        public async Task<List<Cliente>> GetByCorreoUsuarioAsync(string correoUsuario)
         {
             return await _context.Clientes
                 .Include(c => c.Usuario)
-                .Include(c => c.Reservas) // <-- importante
-                .Where(c => c.Usuario.CorreoElectronico == correoUsuario)
+                .Include(c => c.Reservas) 
+                .Where(c => c.Usuario != null && c.Usuario.Correo == correoUsuario)
                 .ToListAsync();
         }
 
-        public async Task<Cliente?> GetByIdAsync(Guid id)
+        public async Task<Cliente?> GetByIdAsync(string id)
         {
-            return await _context.Clientes.FindAsync(id);
-        }
-
-        public async Task<Cliente> CreateAsync(Cliente cliente)
+            return await _context.Clientes
+                .Include(c => c.Usuario)
+                .Include(c => c.Reservas)
+                .FirstOrDefaultAsync(c => c.Id == id);
+        }        public async Task<Cliente> CreateAsync(Cliente cliente)
         {
+            // Generar ID personalizado si no se ha proporcionado uno
+            if (string.IsNullOrEmpty(cliente.Id))
+            {
+                cliente.Id = IdGenerator.GenerateId("Cliente");
+            }
+            
             _context.Clientes.Add(cliente);
             await _context.SaveChangesAsync();
             return cliente;
@@ -56,25 +60,6 @@ namespace back_end.Modules.clientes.Repositories
         {
             _context.Clientes.Remove(cliente);
             return await _context.SaveChangesAsync() > 0;
-        }
-
-        public async Task<List<Cliente>> SearchAsync(string? query)
-        {
-            if (string.IsNullOrWhiteSpace(query))
-                return new List<Cliente>();
-
-            return await _context.Clientes
-                .Where(c => (c.Nombre != null && c.Nombre.Contains(query)) ||
-                            (c.CorreoElectronico != null && c.CorreoElectronico.Contains(query)) ||
-                            (c.Telefono != null && c.Telefono.Contains(query)))
-                .ToListAsync();
-        }
-
-        public async Task<List<Cliente>> FilterByTipoClienteAsync(string tipoCliente)
-        {
-            return await _context.Clientes
-                .Where(c => c.TipoCliente == tipoCliente)
-                .ToListAsync();
         }
     }
 }

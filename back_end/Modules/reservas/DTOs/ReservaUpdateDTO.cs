@@ -2,9 +2,13 @@ namespace back_end.Modules.reservas.DTOs
 {
     public class ReservaUpdateDTO
     {
-        public string? Estado { get; set; }
+        public string? NombreEvento { get; set; }
+        public DateOnly? FechaEjecucion { get; set; }
         public string? Descripcion { get; set; }
+        public string? Estado { get; set; }
         public decimal? PrecioTotal { get; set; }
-        public string? Observaciones { get; set; }
+        public Guid? TipoEventoId { get; set; }
+        public Guid? ServicioId { get; set; }
+        public double? PrecioAdelanto { get; set; }
     }
 }

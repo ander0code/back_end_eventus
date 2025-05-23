@@ -11,10 +11,8 @@ namespace back_end.Modules.servicios.DTOs
         public DateTime? FechaCreacion { get; set; }
         public Guid? UsuarioId { get; set; }
         
-        // Colección de items asociados al servicio
         public List<ServicioItemDTO> Items { get; set; } = new List<ServicioItemDTO>();
         
-        // Cantidad total de items asignados al servicio (para visualización rápida)
-        public int TotalItems => Items.Sum(i => i.Cantidad ?? 0);
+        public int TotalItems => Items.Count;
     }
 }

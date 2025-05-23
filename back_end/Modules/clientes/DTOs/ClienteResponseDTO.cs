@@ -1,14 +1,4 @@
 namespace back_end.Modules.clientes.DTOs;
 
-public class ClienteResponseDTO
-{
-    public Guid Id { get; set; }
-    public string? TipoCliente { get; set; } = null!;
-    public string Nombre { get; set; } = null!;
-    public string? CorreoElectronico { get; set; }
-    public string? Telefono { get; set; }
-    public string? Direccion { get; set; }
-    public DateTime? FechaRegistro { get; set; }
-    public int TotalReservas { get; set; }
-    public DateOnly? UltimaFechaReserva { get; set; }
-}
+// Este archivo está vacío y puede ser eliminado
+// Las definiciones se encuentran en ClienteDTO.cs
