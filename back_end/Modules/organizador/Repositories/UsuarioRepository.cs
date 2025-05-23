@@ -1,13 +1,13 @@
 using back_end.Core.Data;
-using back_end.Modules.usuarios.Models;
+using back_end.Modules.organizador.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace back_end.Modules.usuarios.Repositories
+namespace back_end.Modules.organizador.Repositories
 {
     public interface IUsuarioRepository
     {
         Task<List<Usuario>> GetAllAsync();
-        Task<Usuario?> GetByIdAsync(int id);
+        Task<Usuario?> GetByIdAsync(string id);
         Task<Usuario?> GetByCorreoAsync(string correo);
         Task<Usuario> UpdateAsync(Usuario usuario);
     }
@@ -26,14 +26,14 @@ namespace back_end.Modules.usuarios.Repositories
             return await _context.Usuarios.ToListAsync();
         }
 
-        public async Task<Usuario?> GetByIdAsync(int id)
+        public async Task<Usuario?> GetByIdAsync(string id)
         {
             return await _context.Usuarios.FindAsync(id);
         }
 
         public async Task<Usuario?> GetByCorreoAsync(string correo)
         {
-            return await _context.Usuarios.FirstOrDefaultAsync(u => u.CorreoElectronico == correo);
+            return await _context.Usuarios.FirstOrDefaultAsync(u => u.Correo == correo);
         }
 
         public async Task<Usuario> UpdateAsync(Usuario usuario)

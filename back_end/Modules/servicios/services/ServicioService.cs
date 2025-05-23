@@ -1,250 +1,378 @@
-using back_end.Modules.servicios.DTOs;
 using back_end.Modules.servicios.Models;
 using back_end.Modules.servicios.Repositories;
-using back_end.Modules.inventario.Repositories;
-using back_end.Modules.usuarios.Repositories;
+using back_end.Modules.servicios.DTOs;
+using back_end.Modules.Item.Repositories;
+using Microsoft.Extensions.Logging;
+using System;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using System.Linq;
 
 namespace back_end.Modules.servicios.Services
 {
     public interface IServicioService
     {
         Task<List<ServicioResponseDTO>> GetByCorreoAsync(string correo);
-        Task<ServicioResponseDTO?> GetByIdAsync(Guid id, string correo);
+        Task<List<ServicioResponseDTO>> SearchServiciosAsync(string correo, string searchTerm);
+        Task<ServicioResponseDTO?> GetByIdAsync(Guid id);
         Task<ServicioResponseDTO?> CreateAsync(string correo, ServicioCreateDTO dto);
-        Task<ServicioResponseDTO?> UpdateAsync(string correo, Guid id, ServicioUpdateDTO dto);
-        Task<bool> DeleteAsync(string correo, Guid id);
+        Task<ServicioResponseDTO?> UpdateAsync(Guid id, string correo, ServicioUpdateDTO dto);
+        Task<bool> DeleteAsync(Guid id, string correo);
+        
+        // Métodos para DetalleServicio
+        Task<DetalleServicioDTO?> AddDetalleServicioAsync(Guid servicioId, string correo, DetalleServicioCreateDTO dto);
+        Task<DetalleServicioDTO?> UpdateDetalleServicioAsync(Guid id, DetalleServicioUpdateDTO dto);
+        Task<bool> RemoveDetalleServicioAsync(Guid id);
+        Task<bool> RemoveMultipleDetalleServiciosAsync(Guid servicioId, DetalleServicioDeleteDTO dto);
+        
+        // Métodos de compatibilidad para servicioItem
+        Task<ServicioItemDTO?> AddServicioItemAsync(Guid servicioId, string correo, ServicioItemCreateDTO dto);
+        Task<ServicioItemDTO?> UpdateServicioItemAsync(Guid id, ServicioItemUpdateDTO dto);
+        Task<bool> RemoveServicioItemAsync(Guid id);
+        Task<bool> RemoveMultipleServicioItemsAsync(Guid servicioId, ServicioItemsDeleteDTO dto);
     }
 
     public class ServicioService : IServicioService
     {
         private readonly IServicioRepository _repository;
-        private readonly IInventarioRepository _inventarioRepository;
-        private readonly IUsuarioRepository _usuarioRepository;
+        private readonly IItemRepository _itemRepository;
         private readonly ILogger<ServicioService> _logger;
 
-        public ServicioService(
-            IServicioRepository repository, 
-            IInventarioRepository inventarioRepository, 
-            IUsuarioRepository usuarioRepository,
-            ILogger<ServicioService> logger)
+        public ServicioService(IServicioRepository repository, IItemRepository itemRepository, ILogger<ServicioService> logger)
         {
             _repository = repository;
-            _inventarioRepository = inventarioRepository;
-            _usuarioRepository = usuarioRepository;
+            _itemRepository = itemRepository;
             _logger = logger;
         }
 
         public async Task<List<ServicioResponseDTO>> GetByCorreoAsync(string correo)
         {
-            var servicios = await _repository.GetByCorreoAsync(correo);
-            return servicios.Select(MapToDTO).ToList();
+            try
+            {
+                var servicios = await _repository.GetByCorreoAsync(correo);
+                return servicios.Select(MapToDTO).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener servicios para correo {Correo}", correo);
+                return new List<ServicioResponseDTO>();
+            }
         }
 
-        public async Task<ServicioResponseDTO?> GetByIdAsync(Guid id, string correo)
+        public async Task<List<ServicioResponseDTO>> SearchServiciosAsync(string correo, string searchTerm)
         {
-            var servicio = await _repository.GetByIdAndCorreoAsync(id, correo);
-            return servicio == null ? null : MapToDTO(servicio);
+            try
+            {
+                var servicios = await _repository.SearchServiciosAsync(correo, searchTerm);
+                return servicios.Select(MapToDTO).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al buscar servicios con término {SearchTerm} para correo {Correo}", searchTerm, correo);
+                return new List<ServicioResponseDTO>();
+            }
+        }
+
+        public async Task<ServicioResponseDTO?> GetByIdAsync(Guid id)
+        {
+            try
+            {
+                var servicio = await _repository.GetByIdAsync(id);
+                return servicio != null ? MapToDTO(servicio) : null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener servicio con ID {Id}", id);
+                return null;
+            }
         }
 
         public async Task<ServicioResponseDTO?> CreateAsync(string correo, ServicioCreateDTO dto)
         {
-            var usuario = await _usuarioRepository.GetByCorreoAsync(correo);
-            if (usuario == null)
+            try
             {
-                _logger.LogWarning("Usuario no encontrado con correo: {Correo}", correo);
-                return null;
-            }
-
-            var nuevo = new Servicio
-            {
-                UsuarioId = usuario.Id,
-                Nombre = dto.NombreServicio ?? "Servicio sin nombre",
-                Descripcion = dto.Descripcion,
-                PrecioBase = dto.PrecioBase,
-                Categoria = dto.TipoEvento,
-                Imagenes = dto.Imagenes
-            };
-
-            var creado = await _repository.CreateAsync(nuevo);
-            if (creado == null)
-            {
-                _logger.LogError("Error al crear servicio para usuario con correo: {Correo}", correo);
-                return null;
-            }
-
-            if (dto.Items != null && dto.Items.Any())
-            {
-                foreach (var itemDto in dto.Items)
+                var servicio = new Servicio
                 {
+                    Id = Guid.NewGuid(),
+                    Nombre = dto.NombreServicio,
+                    Descripcion = dto.Descripcion,
+                    PrecioBase = dto.PrecioBase
+                };
 
-                    var inventario = await _inventarioRepository.GetByIdAsync(itemDto.InventarioId);
-                    if (inventario != null && inventario.UsuarioId == usuario.Id)
+                var creado = await _repository.CreateAsync(servicio);
+
+                if (creado != null && dto.Items != null && dto.Items.Any())
+                {
+                    foreach (var itemDto in dto.Items)
                     {
-
-                        int cantidadRequerida = itemDto.Cantidad ?? 1;
-                        if (inventario.Stock < cantidadRequerida)
+                        var detalle = new DetalleServicio
                         {
-                            _logger.LogWarning("Stock insuficiente para el item de inventario: {InventarioId}. Stock actual: {Stock}, Requerido: {Requerido}",
-                                itemDto.InventarioId, inventario.Stock, cantidadRequerida);
-                            continue; 
-                        }
-
-                        var servicioItem = new ServicioItem
-                        {
-                            ServicioId = creado.Id,
+                            Id = Guid.NewGuid(),
+                            ServicioId = servicio.Id,
                             InventarioId = itemDto.InventarioId,
-                            Cantidad = cantidadRequerida
+                            Cantidad = itemDto.Cantidad,
+                            Estado = itemDto.Estado,
+                            PrecioActual = itemDto.PrecioActual,
+                            Fecha = DateTime.Now
                         };
-                        
-                        var itemCreado = await _repository.AddServicioItemAsync(servicioItem);
-                        
-                        if (itemCreado != null)
-                        {
-                            inventario.Stock -= cantidadRequerida;
-                            await _inventarioRepository.UpdateAsync(inventario);
-                            _logger.LogInformation("Stock reducido al crear servicio: {InventarioId}, Cantidad: {Cantidad}", 
-                                itemDto.InventarioId, cantidadRequerida);
-                        }
+
+                        await _repository.AddDetalleServicioAsync(detalle);
                     }
-                    else
-                    {
-                        _logger.LogWarning("Item de inventario no encontrado o no pertenece al usuario: {InventarioId}", itemDto.InventarioId);
-                    }
+
+                    // Recargar el servicio con sus detalles
+                    creado = await _repository.GetByIdAsync(servicio.Id);
                 }
+
+                return creado != null ? MapToDTO(creado) : null;
             }
-
-            var servicioConItems = await _repository.GetByIdAsync(creado.Id);
-            return servicioConItems == null ? null : MapToDTO(servicioConItems);
-        }
-
-        public async Task<ServicioResponseDTO?> UpdateAsync(string correo, Guid id, ServicioUpdateDTO dto)
-        {
-            var existente = await _repository.GetByIdAndCorreoAsync(id, correo);
-            if (existente == null)
+            catch (Exception ex)
             {
-                _logger.LogWarning("Servicio no encontrado con ID: {Id} para correo: {Correo}", id, correo);
+                _logger.LogError(ex, "Error al crear servicio para correo {Correo}", correo);
                 return null;
             }
-
-            if (dto.NombreServicio != null) existente.Nombre = dto.NombreServicio;
-            if (dto.Descripcion != null) existente.Descripcion = dto.Descripcion;
-            if (dto.PrecioBase != null) existente.PrecioBase = dto.PrecioBase;
-            if (dto.TipoEvento != null) existente.Categoria = dto.TipoEvento;
-            if (dto.Imagenes != null) existente.Imagenes = dto.Imagenes;
-
-            var actualizado = await _repository.UpdateAsync(existente);
-            if (actualizado == null)
-            {
-                _logger.LogError("Error al actualizar servicio con ID: {Id}", id);
-                return null;
-            }
-
-            if (dto.ItemsToAdd != null && dto.ItemsToAdd.Any())
-            {
-                foreach (var itemDto in dto.ItemsToAdd)
-                {
-
-                    var existingItem = existente.ServicioItems.FirstOrDefault(si => si.InventarioId == itemDto.InventarioId);
-                    
-                    if (existingItem != null)
-                    {
-
-                        existingItem.Cantidad = itemDto.Cantidad;
-                        await _repository.UpdateServicioItemAsync(existingItem);
-                    }
-                    else
-                    {
-
-                        var inventario = await _inventarioRepository.GetByIdAsync(itemDto.InventarioId);
-                        if (inventario != null && inventario.Usuario.CorreoElectronico == correo)
-                        {
-                            var nuevoItem = new ServicioItem
-                            {
-                                ServicioId = existente.Id,
-                                InventarioId = itemDto.InventarioId,
-                                Cantidad = itemDto.Cantidad
-                            };
-                            await _repository.AddServicioItemAsync(nuevoItem);
-                        }
-                        else
-                        {
-                            _logger.LogWarning("Item de inventario no encontrado o no pertenece al usuario: {InventarioId}", itemDto.InventarioId);
-                        }
-                    }
-                }
-            }
-
-            if (dto.ItemsToRemove != null && dto.ItemsToRemove.Any())
-            {
-                foreach (var itemId in dto.ItemsToRemove)
-                {
-                    var item = await _repository.GetServicioItemByIdAsync(itemId);
-                    if (item != null && item.ServicioId == existente.Id)
-                    {
-                        await _repository.RemoveServicioItemAsync(item);
-                    }
-                }
-            }
-
-            var servicioActualizado = await _repository.GetByIdAsync(id);
-            return servicioActualizado == null ? null : MapToDTO(servicioActualizado);
         }
 
-        public async Task<bool> DeleteAsync(string correo, Guid id)
+        public async Task<ServicioResponseDTO?> UpdateAsync(Guid id, string correo, ServicioUpdateDTO dto)
         {
-            var servicio = await _repository.GetByIdAndCorreoAsync(id, correo);
-            if (servicio == null)
+            try
             {
-                _logger.LogWarning("Servicio no encontrado para eliminar con ID: {Id} y correo: {Correo}", id, correo);
+                var servicio = await _repository.GetByIdAndCorreoAsync(id, correo);
+                if (servicio == null) return null;
+
+                servicio.Nombre = dto.NombreServicio ?? servicio.Nombre;
+                servicio.Descripcion = dto.Descripcion ?? servicio.Descripcion;
+                servicio.PrecioBase = dto.PrecioBase ?? servicio.PrecioBase;
+
+                var actualizado = await _repository.UpdateAsync(servicio);
+
+                // Agregar nuevos items si se proporcionan
+                if (actualizado != null && dto.ItemsToAdd != null && dto.ItemsToAdd.Any())
+                {
+                    foreach (var itemDto in dto.ItemsToAdd)
+                    {
+                        var detalle = new DetalleServicio
+                        {
+                            Id = Guid.NewGuid(),
+                            ServicioId = servicio.Id,
+                            InventarioId = itemDto.InventarioId,
+                            Cantidad = itemDto.Cantidad,
+                            Estado = itemDto.Estado,
+                            PrecioActual = itemDto.PrecioActual,
+                            Fecha = DateTime.Now
+                        };
+
+                        await _repository.AddDetalleServicioAsync(detalle);
+                    }
+                }
+
+                // Eliminar items si se solicita
+                if (actualizado != null && dto.ItemsToRemove != null && dto.ItemsToRemove.Any())
+                {
+                    var detalles = await _repository.GetDetalleServiciosByServicioIdAsync(servicio.Id);
+                    var detallesToRemove = detalles.Where(d => dto.ItemsToRemove.Contains(d.Id)).ToList();
+                    if (detallesToRemove.Any())
+                    {
+                        await _repository.RemoveMultipleDetalleServiciosAsync(detallesToRemove);
+                    }
+                }
+
+                // Recargar el servicio con sus detalles actualizados
+                return await GetByIdAsync(id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar servicio con ID {Id} para correo {Correo}", id, correo);
+                return null;
+            }
+        }
+
+        public async Task<bool> DeleteAsync(Guid id, string correo)
+        {
+            try
+            {
+                var servicio = await _repository.GetByIdAndCorreoAsync(id, correo);
+                if (servicio == null) return false;
+
+                return await _repository.DeleteAsync(servicio);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar servicio con ID {Id} para correo {Correo}", id, correo);
                 return false;
             }
+        }
 
-            foreach (var item in servicio.ServicioItems)
+        // DetalleServicio methods
+        public async Task<DetalleServicioDTO?> AddDetalleServicioAsync(Guid servicioId, string correo, DetalleServicioCreateDTO dto)
+        {
+            try
             {
-                if (item.Cantidad.HasValue && item.Cantidad.Value > 0)
+                var servicio = await _repository.GetByIdAndCorreoAsync(servicioId, correo);
+                if (servicio == null) return null;
+
+                var item = await _itemRepository.GetByIdAsync(dto.InventarioId);
+                if (item == null) return null;
+
+                var detalle = new DetalleServicio
                 {
-                    var inventario = await _inventarioRepository.GetByIdAsync(item.InventarioId);
-                    if (inventario != null)
+                    Id = Guid.NewGuid(),
+                    ServicioId = servicioId,
+                    InventarioId = dto.InventarioId,
+                    Cantidad = dto.Cantidad,
+                    Estado = dto.Estado,
+                    PrecioActual = dto.PrecioActual ?? item.Preciobase,
+                    Fecha = DateTime.Now
+                };
+
+                var creado = await _repository.AddDetalleServicioAsync(detalle);
+                
+                if (creado != null)
+                {
+                    return new DetalleServicioDTO
                     {
-
-                        inventario.Stock += item.Cantidad.Value;
-                        await _inventarioRepository.UpdateAsync(inventario);
-                        _logger.LogInformation("Stock devuelto al inventario al eliminar servicio: {InventarioId}, Cantidad: {Cantidad}", 
-                            item.InventarioId, item.Cantidad.Value);
-                    }
+                        Id = creado.Id,
+                        InventarioId = creado.InventarioId,
+                        Cantidad = creado.Cantidad,
+                        NombreItem = creado.Inventario?.Nombre,
+                        Estado = creado.Estado,
+                        Fecha = creado.Fecha,
+                        PrecioActual = creado.PrecioActual,
+                        StockActual = creado.Inventario?.Stock ?? 0
+                    };
                 }
+                return null;
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al agregar detalle de servicio para servicio {ServicioId}", servicioId);
+                return null;
+            }
+        }
 
-            return await _repository.DeleteAsync(servicio);
+        public async Task<DetalleServicioDTO?> UpdateDetalleServicioAsync(Guid id, DetalleServicioUpdateDTO dto)
+        {
+            try
+            {
+                var detalle = await _repository.GetDetalleServicioByIdAsync(id);
+                if (detalle == null) return null;
+
+                detalle.Cantidad = dto.Cantidad ?? detalle.Cantidad;
+                detalle.Estado = dto.Estado ?? detalle.Estado;
+                detalle.PrecioActual = dto.PrecioActual ?? detalle.PrecioActual;
+
+                var actualizado = await _repository.UpdateDetalleServicioAsync(detalle);
+                if (actualizado != null)
+                {
+                    return new DetalleServicioDTO
+                    {
+                        Id = actualizado.Id,
+                        InventarioId = actualizado.InventarioId,
+                        Cantidad = actualizado.Cantidad,
+                        NombreItem = actualizado.Inventario?.Nombre,
+                        Estado = actualizado.Estado,
+                        Fecha = actualizado.Fecha,
+                        PrecioActual = actualizado.PrecioActual,
+                        StockActual = actualizado.Inventario?.Stock ?? 0
+                    };
+                }
+                return null;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar detalle de servicio con ID {Id}", id);
+                return null;
+            }
+        }
+
+        public async Task<bool> RemoveDetalleServicioAsync(Guid id)
+        {
+            try
+            {
+                var detalle = await _repository.GetDetalleServicioByIdAsync(id);
+                if (detalle == null) return false;
+
+                return await _repository.RemoveDetalleServicioAsync(detalle);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar detalle de servicio con ID {Id}", id);
+                return false;
+            }
+        }
+
+        public async Task<bool> RemoveMultipleDetalleServiciosAsync(Guid servicioId, DetalleServicioDeleteDTO dto)
+        {
+            try
+            {
+                if (dto.ItemIds == null || !dto.ItemIds.Any()) return false;
+
+                var detalles = await _repository.GetDetalleServiciosByServicioIdAsync(servicioId);
+                var detallesToRemove = detalles.Where(d => dto.ItemIds.Contains(d.Id)).ToList();
+
+                if (!detallesToRemove.Any()) return false;
+
+                return await _repository.RemoveMultipleDetalleServiciosAsync(detallesToRemove);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al eliminar múltiples detalles de servicio para servicio {ServicioId}", servicioId);
+                return false;
+            }
+        }
+
+        // Métodos de compatibilidad para servicioItem
+        public Task<ServicioItemDTO?> AddServicioItemAsync(Guid servicioId, string correo, ServicioItemCreateDTO dto)
+        {
+            return AddDetalleServicioAsync(servicioId, correo, dto)
+                .ContinueWith(t => (ServicioItemDTO?)t.Result);
+        }
+
+        public Task<ServicioItemDTO?> UpdateServicioItemAsync(Guid id, ServicioItemUpdateDTO dto)
+        {
+            return UpdateDetalleServicioAsync(id, dto)
+                .ContinueWith(t => (ServicioItemDTO?)t.Result);
+        }
+
+        public Task<bool> RemoveServicioItemAsync(Guid id)
+        {
+            return RemoveDetalleServicioAsync(id);
+        }
+
+        public Task<bool> RemoveMultipleServicioItemsAsync(Guid servicioId, ServicioItemsDeleteDTO dto)
+        {
+            return RemoveMultipleDetalleServiciosAsync(servicioId, dto);
         }
 
         private ServicioResponseDTO MapToDTO(Servicio servicio)
         {
-            return new ServicioResponseDTO
+            var dto = new ServicioResponseDTO
             {
                 Id = servicio.Id,
                 NombreServicio = servicio.Nombre,
                 Descripcion = servicio.Descripcion,
                 PrecioBase = servicio.PrecioBase,
-                TipoEvento = servicio.Categoria,
-                Imagenes = servicio.Imagenes,
-                FechaCreacion = DateTime.UtcNow, 
-                UsuarioId = servicio.UsuarioId,
-                Items = servicio.ServicioItems.Select(MapToItemDTO).ToList()
+                Items = new List<ServicioItemDTO>()
             };
-        }
-        
-        private ServicioItemDTO MapToItemDTO(ServicioItem item)
-        {
-            return new ServicioItemDTO
+
+            if (servicio.DetalleServicios != null)
             {
-                Id = item.Id,
-                InventarioId = item.InventarioId,
-                Cantidad = item.Cantidad,
-                NombreItem = item.Inventario?.Nombre,
-                CategoriaItem = item.Inventario?.Categoria,
-                StockActual = item.Inventario?.Stock ?? 0,
-            };
+                foreach (var detalle in servicio.DetalleServicios)
+                {
+                    dto.Items.Add(new ServicioItemDTO
+                    {
+                        Id = detalle.Id,
+                        InventarioId = detalle.InventarioId ?? Guid.Empty,
+                        Cantidad = detalle.Cantidad,
+                        NombreItem = detalle.Inventario?.Nombre,
+                        Estado = detalle.Estado,
+                        Fecha = detalle.Fecha,
+                        PrecioActual = detalle.PrecioActual,
+                        StockActual = detalle.Inventario?.Stock ?? 0
+                    });
+                }
+            }
+
+            return dto;
         }
     }
 }

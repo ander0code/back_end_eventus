@@ -1,19 +1,19 @@
-using back_end.Modules.inventario.DTOs;
-using back_end.Modules.inventario.services;
+using back_end.Modules.Item.DTOs;
+using back_end.Modules.Item.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace back_end.Modules.inventario.Controllers
+namespace back_end.Modules.Item.Controllers
 {
     [ApiController]
-    [Route("api/inventario")]
+    [Route("api/items")]
     [Authorize] 
-    public class InventarioController : ControllerBase
+    public class ItemController : ControllerBase
     {
-        private readonly IInventarioService _service;
-        private readonly ILogger<InventarioController> _logger;
+        private readonly IItemService _service;
+        private readonly ILogger<ItemController> _logger;
 
-        public InventarioController(IInventarioService service, ILogger<InventarioController> logger)
+        public ItemController(IItemService service, ILogger<ItemController> logger)
         {
             _service = service;
             _logger = logger;
@@ -24,23 +24,23 @@ namespace back_end.Modules.inventario.Controllers
         {
             try
             {
-                _logger.LogInformation("Solicitando items de inventario para usuario con ID: {UsuarioId}", usuarioId);
+                _logger.LogInformation("Solicitando items para usuario con ID: {UsuarioId}", usuarioId);
                 var items = await _service.GetByUsuarioIdAsync(usuarioId);
                 return Ok(items);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener items de inventario para usuario con ID: {UsuarioId}", usuarioId);
-                return StatusCode(500, new { message = "Error al obtener inventario", error = ex.Message });
+                _logger.LogError(ex, "Error al obtener items para usuario con ID: {UsuarioId}", usuarioId);
+                return StatusCode(500, new { message = "Error al obtener items", error = ex.Message });
             }
         }
 
         [HttpPost("{correo}")]
-        public async Task<IActionResult> Create(string correo, [FromBody] InventarioCreateDTO dto)
+        public async Task<IActionResult> Create(string correo, [FromBody] ItemCreateDTO dto)
         {
             try
             {
-                _logger.LogInformation("Creando nuevo item de inventario para usuario con correo: {Correo}", correo);
+                _logger.LogInformation("Creando nuevo item para usuario con correo: {Correo}", correo);
                 
                 // Validación básica
                 if (string.IsNullOrWhiteSpace(dto.Nombre))
@@ -58,23 +58,23 @@ namespace back_end.Modules.inventario.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear item de inventario para usuario con correo: {Correo}", correo);
+                _logger.LogError(ex, "Error al crear item para usuario con correo: {Correo}", correo);
                 return StatusCode(500, new { message = "Error al crear item", error = ex.Message });
             }
         }
 
         [HttpPut("{correo}/{id:guid}")]
-        public async Task<IActionResult> Update(string correo, Guid id, [FromBody] InventarioUpdateDTO dto)
+        public async Task<IActionResult> Update(string correo, Guid id, [FromBody] ItemUpdateDTO dto)
         {
             try
             {
-                _logger.LogInformation("Actualizando item de inventario con ID: {Id} para usuario con correo: {Correo}", id, correo);
+                _logger.LogInformation("Actualizando item con ID: {Id} para usuario con correo: {Correo}", id, correo);
                 
                 var actualizado = await _service.UpdateAsync(id, correo, dto);
                 
                 if (actualizado == null)
                 {
-                    _logger.LogWarning("Item de inventario no encontrado con ID: {Id} para correo: {Correo}", id, correo);
+                    _logger.LogWarning("Item no encontrado con ID: {Id} para correo: {Correo}", id, correo);
                     return NotFound(new { message = "Item no encontrado o no pertenece al usuario" });
                 }
                 
@@ -82,7 +82,7 @@ namespace back_end.Modules.inventario.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar item de inventario con ID: {Id} para correo: {Correo}", id, correo);
+                _logger.LogError(ex, "Error al actualizar item con ID: {Id} para correo: {Correo}", id, correo);
                 return StatusCode(500, new { message = "Error al actualizar item", error = ex.Message });
             }
         }
@@ -92,13 +92,13 @@ namespace back_end.Modules.inventario.Controllers
         {
             try
             {
-                _logger.LogInformation("Eliminando item de inventario con ID: {Id} para usuario con correo: {Correo}", id, correo);
+                _logger.LogInformation("Eliminando item con ID: {Id} para usuario con correo: {Correo}", id, correo);
                 
                 var resultado = await _service.DeleteAsync(id, correo);
                 
                 if (!resultado)
                 {
-                    _logger.LogWarning("Item de inventario no encontrado con ID: {Id} para correo: {Correo}", id, correo);
+                    _logger.LogWarning("Item no encontrado con ID: {Id} para correo: {Correo}", id, correo);
                     return NotFound(new { message = "Item no encontrado o no pertenece al usuario" });
                 }
                 
@@ -106,7 +106,7 @@ namespace back_end.Modules.inventario.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar item de inventario con ID: {Id} para correo: {Correo}", id, correo);
+                _logger.LogError(ex, "Error al eliminar item con ID: {Id} para correo: {Correo}", id, correo);
                 return StatusCode(500, new { message = "Error al eliminar item", error = ex.Message });
             }
         }

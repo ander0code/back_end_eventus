@@ -6,5 +6,6 @@ namespace back_end.Modules.reservas.DTOs
         public string? NombreServicio { get; set; }
         public int CantidadItems { get; set; }
         public decimal Precio { get; set; }
+        public string? Descripcion { get; set; }
     }
 }

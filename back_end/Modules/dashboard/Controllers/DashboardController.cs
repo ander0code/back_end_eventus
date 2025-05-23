@@ -22,8 +22,7 @@ namespace back_end.Modules.dashboard.Controllers
 
         [HttpGet("{correo}")]
         public async Task<IActionResult> GetAllDashboardData(string correo)
-        {
-            try
+        {            try
             {
                 _logger.LogInformation("Solicitando información completa del dashboard para usuario: {Correo}", correo);
                 

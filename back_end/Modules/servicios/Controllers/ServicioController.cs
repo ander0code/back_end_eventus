@@ -42,7 +42,7 @@ namespace back_end.Modules.servicios.Controllers
             try
             {
                 _logger.LogInformation("Solicitud para obtener servicio con ID: {Id} del usuario con correo: {Correo}", id, correo);
-                var servicio = await _service.GetByIdAsync(id, correo);
+                var servicio = await _service.GetByIdAsync(id);
                 
                 if (servicio == null)
                 {
@@ -86,17 +86,17 @@ namespace back_end.Modules.servicios.Controllers
                 return StatusCode(500, new { message = "Error al crear servicio" });
             }
         }
-
+        
         [HttpPut("{correo}/{id:guid}")]
         public async Task<IActionResult> Update(string correo, Guid id, [FromBody] ServicioUpdateDTO dto)
         {
             try
             {
-                _logger.LogInformation("Solicitud para actualizar servicio con ID: {Id} del usuario con correo: {Correo}", id, correo);
-                var actualizado = await _service.UpdateAsync(correo, id, dto);
+                _logger.LogInformation("Solicitud para actualizar servicio con ID: {Id} del usuario con correo: {Correo}", id.ToString(), correo);
+                var actualizado = await _service.UpdateAsync(id, correo, dto);
                 if (actualizado == null)
                 {
-                    _logger.LogWarning("Servicio no encontrado con ID: {Id} para el usuario con correo: {Correo}", id, correo);
+                    _logger.LogWarning("Servicio no encontrado con ID: {Id} para el usuario con correo: {Correo}", id.ToString(), correo);
                     return NotFound(new { message = "Servicio no encontrado" });
                 }
 
@@ -104,21 +104,21 @@ namespace back_end.Modules.servicios.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar servicio con ID: {Id} del usuario con correo: {Correo}", id, correo);
+                _logger.LogError(ex, "Error al actualizar servicio con ID: {Id} del usuario con correo: {Correo}", id.ToString(), correo);
                 return StatusCode(500, new { message = "Error al actualizar servicio" });
             }
         }
-
+        
         [HttpDelete("{correo}/{id:guid}")]
         public async Task<IActionResult> Delete(string correo, Guid id)
         {
             try
             {
-                _logger.LogInformation("Solicitud para eliminar servicio con ID: {Id} del usuario con correo: {Correo}", id, correo);
-                var eliminado = await _service.DeleteAsync(correo, id);
+                _logger.LogInformation("Solicitud para eliminar servicio con ID: {Id} del usuario con correo: {Correo}", id.ToString(), correo);
+                var eliminado = await _service.DeleteAsync(id, correo);
                 if (!eliminado)
                 {
-                    _logger.LogWarning("Servicio no encontrado para eliminar con ID: {Id} y correo: {Correo}", id, correo);
+                    _logger.LogWarning("Servicio no encontrado para eliminar con ID: {Id} y correo: {Correo}", id.ToString(), correo);
                     return NotFound(new { message = "Servicio no encontrado" });
                 }
 
@@ -126,7 +126,7 @@ namespace back_end.Modules.servicios.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar servicio con ID: {Id} del usuario con correo: {Correo}", id, correo);
+                _logger.LogError(ex, "Error al eliminar servicio con ID: {Id} del usuario con correo: {Correo}", id.ToString(), correo);
                 return StatusCode(500, new { message = "Error al eliminar servicio" });
             }
         }

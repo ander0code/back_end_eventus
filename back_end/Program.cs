@@ -3,16 +3,18 @@ using back_end.Core.Configurations;
 using back_end.Middleware;
 using back_end.Modules.Auth.Repositories;
 using back_end.Modules.Auth.Services;
-using back_end.Modules.inventario.Repositories;
-using back_end.Modules.inventario.services;
+using back_end.Modules.Item.Repositories;
+using back_end.Modules.Item.Services;
 using back_end.Modules.reservas.Services;
 using back_end.Modules.reservas.Repositories;
 using back_end.Modules.servicios.Services;
 using back_end.Modules.servicios.Repositories;
 using back_end.Modules.clientes.Repositories;
 using back_end.Modules.clientes.Services;
-using back_end.Modules.usuarios.services;
-using back_end.Modules.usuarios.Repositories;
+using back_end.Modules.organizador.services;
+using back_end.Modules.organizador.Repositories;
+using back_end.Modules.pagos.Repositories;
+using back_end.Modules.pagos.services;
 using back_end.Modules.dashboard.services;
 using Microsoft.EntityFrameworkCore;
 
@@ -58,9 +60,11 @@ builder.Services.AddJwtConfiguration(builder.Configuration);
 builder.Services.AddScoped<IUserRepository, UserRepository>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 
-// Usuarios Module
+// Organizador Module
 builder.Services.AddScoped<IUsuarioService, UsuarioService>();
 builder.Services.AddScoped<IUsuarioRepository, UsuarioRepository>();
+builder.Services.AddScoped<IOrganizadorService, OrganizadorService>();
+builder.Services.AddScoped<IOrganizadorRepository, OrganizadorRepository>();
 
 // Reservas Module
 builder.Services.AddScoped<IReservaRepository, ReservaRepository>();
@@ -70,13 +74,17 @@ builder.Services.AddScoped<IReservaService, ReservaService>();
 builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
 builder.Services.AddScoped<IServicioService, ServicioService>();
 
-// Inventario Module
-builder.Services.AddScoped<IInventarioRepository, InventarioRepository>();
-builder.Services.AddScoped<IInventarioService, InventarioService>();
+// Item Module
+builder.Services.AddScoped<IItemRepository, ItemRepository>();
+builder.Services.AddScoped<IItemService, ItemService>();
 
 // Cliente Module
 builder.Services.AddScoped<IClienteRepository, ClienteRepository>();
 builder.Services.AddScoped<IClienteService, ClienteService>();
+
+// Pagos Module
+builder.Services.AddScoped<IPagosRepository, PagosRepository>();
+builder.Services.AddScoped<IPagosService, PagosService>();
 
 // Dashboard Module
 builder.Services.AddScoped<IDashboardService, DashboardService>();

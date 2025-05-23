@@ -24,29 +24,29 @@ namespace back_end.Modules.reservas.Controllers
         {
             try
             {
-                _logger.LogInformation("Solicitud para obtener reservas del usuario con correo: {Correo}", correo);
+                _logger.LogInformation("Obteniendo reservas para usuario con correo {Correo}", correo);
                 var reservas = await _service.GetByCorreoAsync(correo);
                 return Ok(reservas);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener reservas para el usuario con correo: {Correo}", correo);
-                return StatusCode(500, new { message = "Error al obtener reservas" });
+                _logger.LogError(ex, "Error al obtener reservas para correo {Correo}", correo);
+                return StatusCode(500, new { message = "Error al obtener reservas", error = ex.Message });
             }
         }
         
         [Authorize]
-        [HttpGet("{correo}/{id:guid}")]
-        public async Task<IActionResult> GetById(string correo, Guid id)
+        [HttpGet("{correo}/{id}")]
+        public async Task<IActionResult> GetById(string correo, string id)
         {
             try
             {
-                _logger.LogInformation("Solicitud para obtener reserva con ID: {Id} del usuario con correo: {Correo}", id, correo);
+                _logger.LogInformation("Obteniendo reserva con ID {Id} para usuario con correo {Correo}", id, correo);
                 var reserva = await _service.GetByIdAsync(correo, id);
                 
                 if (reserva == null)
                 {
-                    _logger.LogWarning("Reserva no encontrada con ID: {Id} para el correo: {Correo}", id, correo);
+                    _logger.LogWarning("Reserva no encontrada con ID {Id} para correo {Correo}", id, correo);
                     return NotFound(new { message = "Reserva no encontrada" });
                 }
                 
@@ -54,8 +54,8 @@ namespace back_end.Modules.reservas.Controllers
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al obtener reserva con ID: {Id} para correo: {Correo}", id, correo);
-                return StatusCode(500, new { message = "Error al obtener reserva" });
+                _logger.LogError(ex, "Error al obtener reserva con ID {Id} para correo {Correo}", id, correo);
+                return StatusCode(500, new { message = "Error al obtener reserva", error = ex.Message });
             }
         }
 
@@ -65,129 +65,110 @@ namespace back_end.Modules.reservas.Controllers
         {
             try
             {
-                _logger.LogInformation("Solicitud para crear reserva del usuario con correo: {Correo}", correo);
+                _logger.LogInformation("Creando nueva reserva para usuario con correo {Correo}", correo);
+                var creada = await _service.CreateAsync(correo, dto);
                 
-                if (string.IsNullOrWhiteSpace(dto.NombreEvento))
+                if (creada == null)
                 {
-                    return BadRequest(new { message = "El nombre del evento es obligatorio" });
+                    _logger.LogWarning("Error al crear reserva para correo {Correo}", correo);
+                    return BadRequest(new { message = "Error al crear reserva" });
                 }
                 
-
-                if (!dto.ClienteId.HasValue && 
-                    (string.IsNullOrWhiteSpace(dto.NombreCliente) || string.IsNullOrWhiteSpace(dto.CorreoCliente)))
-                {
-                    return BadRequest(new { 
-                        message = "Debe proporcionar un ClienteId existente o los datos para crear un cliente nuevo (Nombre y Correo)" 
-                    });
-                }
-                
-                if (dto.Servicios == null || !dto.Servicios.Any())
-                {
-                    return BadRequest(new { message = "Debe proporcionar al menos un servicio para la reserva" });
-                }
-                
-                var nuevaReserva = await _service.CreateAsync(correo, dto);
-                
-                if (nuevaReserva == null)
-                {
-                    if (dto.ClienteId.HasValue)
-                    {
-                        return NotFound(new { message = "No se pudo crear la reserva. Usuario o cliente no encontrado." });
-                    }
-                    return StatusCode(500, new { message = "Error al crear la reserva o el cliente" });
-                }
-
-                string clienteInfo = dto.ClienteId.HasValue 
-                    ? $"Cliente existente con ID: {dto.ClienteId}"
-                    : $"Nuevo cliente creado: {dto.NombreCliente}";
-                
-                return Created($"api/reservas/{correo}/{nuevaReserva.Id}", new {
-                    message = "Reserva creada correctamente",
-                    clienteInfo,
-                    reserva = nuevaReserva
-                });
+                return CreatedAtAction(nameof(GetById), new { correo, id = creada.Id }, creada);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear reserva para el usuario con correo: {Correo}", correo);
-                return StatusCode(500, new { message = "Error al crear reserva: " + ex.Message });
+                _logger.LogError(ex, "Error al crear reserva para correo {Correo}", correo);
+                return StatusCode(500, new { message = "Error al crear reserva", error = ex.Message });
             }
         }
 
         [Authorize]
-        [HttpPut("{correo}/{id:guid}")]
-        [Consumes("application/json")]
-        [Produces("application/json")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status404NotFound)]
-        [ProducesResponseType(StatusCodes.Status500InternalServerError)]
-        public async Task<IActionResult> Update(string correo, Guid id, [FromBody] ReservaUpdateDTO dto)
+        [HttpPut("{correo}/{id}")]
+        public async Task<IActionResult> Update(string correo, string id, [FromBody] ReservaUpdateDTO dto)
         {
             try
             {
-                _logger.LogInformation("Solicitud para actualizar reserva con ID: {Id} del usuario con correo: {Correo}", id, correo);
-                
-                if (dto.ItemsToAdd != null && dto.ItemsToAdd.Any())
-                {
-                    _logger.LogInformation("Se agregarán {Count} servicios a la reserva {Id}", dto.ItemsToAdd.Count, id);
-
-                    if (dto.ItemsToAdd.Any(item => item.ServicioId == Guid.Empty))
-                    {
-                        return BadRequest(new { message = "Hay IDs de servicio inválidos en la lista de servicios a agregar" });
-                    }
-                }
-                
-                if (dto.ItemsToRemove != null && dto.ItemsToRemove.Any())
-                {
-                    _logger.LogInformation("Se eliminarán {Count} servicios de la reserva {Id}", dto.ItemsToRemove.Count, id);
-
-                    if (dto.ItemsToRemove.Any(servicioId => servicioId == Guid.Empty))
-                    {
-                        return BadRequest(new { message = "Hay IDs de servicio inválidos en la lista de servicios a eliminar" });
-                    }
-                }
-                
+                _logger.LogInformation("Actualizando reserva con ID {Id} para usuario con correo {Correo}", id, correo);
                 var actualizada = await _service.UpdateAsync(correo, id, dto);
                 
                 if (actualizada == null)
                 {
-                    _logger.LogWarning("Reserva no encontrada con ID: {Id} para el usuario con correo: {Correo}", id, correo);
+                    _logger.LogWarning("Reserva no encontrada con ID {Id} para correo {Correo}", id, correo);
                     return NotFound(new { message = "Reserva no encontrada" });
                 }
-
-                return Ok(new {
-                    message = "Reserva actualizada correctamente",
-                    reserva = actualizada
-                });
+                
+                return Ok(actualizada);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar reserva con ID: {Id} del usuario con correo: {Correo}", id, correo);
-                return StatusCode(500, new { message = "Error al actualizar reserva: " + ex.Message });
+                _logger.LogError(ex, "Error al actualizar reserva con ID {Id} para correo {Correo}", id, correo);
+                return StatusCode(500, new { message = "Error al actualizar reserva", error = ex.Message });
             }
         }
 
         [Authorize]
-        [HttpDelete("{correo}/{id:guid}")]
-        public async Task<IActionResult> Delete(string correo, Guid id)
+        [HttpDelete("{correo}/{id}")]
+        public async Task<IActionResult> Delete(string correo, string id)
         {
             try
             {
-                _logger.LogInformation("Solicitud para eliminar reserva con ID: {Id} del usuario con correo: {Correo}", id, correo);
-                var eliminada = await _service.DeleteAsync(correo, id);
-                if (!eliminada)
+                _logger.LogInformation("Eliminando reserva con ID {Id} para usuario con correo {Correo}", id, correo);
+                var resultado = await _service.DeleteAsync(correo, id);
+                
+                if (!resultado)
                 {
-                    _logger.LogWarning("Reserva no encontrada para eliminar con ID: {Id} y correo: {Correo}", id, correo);
+                    _logger.LogWarning("Reserva no encontrada con ID {Id} para correo {Correo}", id, correo);
                     return NotFound(new { message = "Reserva no encontrada" });
                 }
-
+                
                 return NoContent();
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al eliminar reserva con ID: {Id} del usuario con correo: {Correo}", id, correo);
-                return StatusCode(500, new { message = "Error al eliminar reserva" });
+                _logger.LogError(ex, "Error al eliminar reserva con ID {Id} para correo {Correo}", id, correo);
+                return StatusCode(500, new { message = "Error al eliminar reserva", error = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("tipos-evento")]
+        public async Task<IActionResult> GetTiposEvento()
+        {
+            try
+            {
+                _logger.LogInformation("Obteniendo tipos de evento");
+                var tiposEvento = await _service.GetAllTiposEventoAsync();
+                return Ok(tiposEvento);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener tipos de evento");
+                return StatusCode(500, new { message = "Error al obtener tipos de evento", error = ex.Message });
+            }
+        }
+
+        [Authorize]
+        [HttpGet("tipos-evento/{id:guid}")]
+        public async Task<IActionResult> GetTipoEventoById(Guid id)
+        {
+            try
+            {
+                _logger.LogInformation("Obteniendo tipo de evento con ID {Id}", id);
+                var tipoEvento = await _service.GetTipoEventoByIdAsync(id);
+                
+                if (tipoEvento == null)
+                {
+                    _logger.LogWarning("Tipo de evento no encontrado con ID {Id}", id);
+                    return NotFound(new { message = "Tipo de evento no encontrado" });
+                }
+                
+                return Ok(tipoEvento);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener tipo de evento con ID {Id}", id);
+                return StatusCode(500, new { message = "Error al obtener tipo de evento", error = ex.Message });
             }
         }
     }

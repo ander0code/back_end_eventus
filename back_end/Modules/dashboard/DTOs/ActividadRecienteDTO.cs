@@ -1,10 +1,9 @@
 using System;
 
 namespace back_end.Modules.dashboard.DTOs
-{
-    public class ActividadRecienteItemDTO
+{    public class ActividadRecienteItemDTO
     {
-        public Guid Id { get; set; }
+        public string Id { get; set; } = string.Empty;
         public string? Tipo { get; set; }  
         public string? Nombre { get; set; } 
         public DateTime FechaRegistro { get; set; }

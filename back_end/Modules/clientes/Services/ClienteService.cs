@@ -2,7 +2,7 @@ using back_end.Modules.clientes.DTOs;
 using back_end.Modules.clientes.Models;
 using back_end.Modules.clientes.Repositories;
 using back_end.Modules.organizador.Models;
-using back_end.Modules.usuarios.Repositories;
+using back_end.Modules.organizador.Repositories;
 
 namespace back_end.Modules.clientes.Services
 {
