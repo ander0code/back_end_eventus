@@ -388,8 +388,6 @@ namespace back_end.Modules.servicios.Services
                 NombreServicio = servicio.Nombre,
                 Descripcion = servicio.Descripcion,
                 PrecioBase = servicio.PrecioBase,
-                // No mapeamos campos que no existen en el modelo
-                // TipoEvento, Imagenes, FechaCreacion y UsuarioId se mantienen como null
                 Items = new List<ServicioItemDTO>()
             };
 

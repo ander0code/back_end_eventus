@@ -12,8 +12,6 @@ namespace back_end.Modules.reservas.Repositories
         Task<Reserva> CreateAsync(Reserva reserva);
         Task<Reserva> UpdateAsync(Reserva reserva);
         Task<bool> DeleteAsync(Reserva reserva);
-        Task<List<TiposEvento>> GetAllTiposEventoAsync();
-        Task<TiposEvento?> GetTipoEventoByIdAsync(Guid id);
         Task<List<Reserva>> GetByClienteIdAsync(string clienteId);
     }
 
@@ -78,22 +76,10 @@ namespace back_end.Modules.reservas.Repositories
             _context.Entry(reserva).State = EntityState.Modified;
             await _context.SaveChangesAsync();
             return reserva;
-        }
-
-        public async Task<bool> DeleteAsync(Reserva reserva)
+        }        public async Task<bool> DeleteAsync(Reserva reserva)
         {
             _context.Reservas.Remove(reserva);
             return (await _context.SaveChangesAsync()) > 0;
-        }
-
-        public async Task<List<TiposEvento>> GetAllTiposEventoAsync()
-        {
-            return await _context.TiposEventos.ToListAsync();
-        }
-
-        public async Task<TiposEvento?> GetTipoEventoByIdAsync(Guid id)
-        {
-            return await _context.TiposEventos.FindAsync(id);
         }
     }
 }

@@ -15,18 +15,7 @@ namespace back_end.Modules.reservas.Services
         Task<ReservaResponseDTO?> CreateAsync(ReservaCreateDTO dto);
         Task<ReservaResponseDTO?> UpdateAsync(Guid id, ReservaUpdateDTO dto);
         Task<bool> DeleteAsync(Guid id);
-        
-        // Servicios de la reserva
-        Task<bool> AddServicioToReservaAsync(Guid reservaId, Guid servicioId);
-        Task<bool> RemoveServicioFromReservaAsync(Guid reservaId, Guid servicioId);
-        Task<bool> UpdateServicioInReservaAsync(Guid reservaId, Guid servicioId, int cantidad, decimal? precio);
-        Task<decimal> CalcularTotalReservaAsync(Guid reservaId);
-        Task<bool> ReplaceServicioInReservaAsync(Guid reservaId, Guid oldServicioId, Guid newServicioId, int? cantidad, decimal? precio);
-        
-        // Tipos de evento
-        Task<List<TipoEventoResponseDTO>> GetAllTiposEventoAsync();
-        Task<TipoEventoResponseDTO?> GetTipoEventoByIdAsync(Guid id);
-    }    public class ReservaService : IReservaService
+    }public class ReservaService : IReservaService
     {
         private readonly IReservaRepository _reservaRepo;
         private readonly IUsuarioRepository _usuarioRepo;
@@ -113,87 +102,13 @@ namespace back_end.Modules.reservas.Services
             var actualizada = await _reservaRepo.UpdateAsync(reserva);
             var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
             return reservaCompleta == null ? null : MapToDTO(reservaCompleta);
-        }
-
-        public async Task<bool> DeleteAsync(Guid id)
+        }        public async Task<bool> DeleteAsync(Guid id)
         {
             var reserva = await _reservaRepo.GetByIdAsync(id.ToString());
             if (reserva == null) return false;
             
             return await _reservaRepo.DeleteAsync(reserva);
-        }
-        
-        public async Task<bool> AddServicioToReservaAsync(Guid reservaId, Guid servicioId)
-        {
-            var reserva = await _reservaRepo.GetByIdAsync(reservaId.ToString());
-            if (reserva == null) return false;
-            
-            // Como no hay ReservaServicios en el modelo actual, simplemente actualizamos el ServicioId
-            reserva.ServicioId = servicioId;
-            await _reservaRepo.UpdateAsync(reserva);
-            
-            return true;
-        }
-        
-        public async Task<bool> RemoveServicioFromReservaAsync(Guid reservaId, Guid servicioId)
-        {
-            var reserva = await _reservaRepo.GetByIdAsync(reservaId.ToString());
-            if (reserva == null) return false;
-            
-            // Si el servicio actual coincide con el que queremos eliminar, lo quitamos
-            if (reserva.ServicioId == servicioId)
-            {
-                reserva.ServicioId = null;
-                await _reservaRepo.UpdateAsync(reserva);
-            }
-            
-            return true;
-        }
-        
-        public async Task<bool> UpdateServicioInReservaAsync(Guid reservaId, Guid servicioId, int cantidad, decimal? precio)
-        {
-            var reserva = await _reservaRepo.GetByIdAsync(reservaId.ToString());
-            if (reserva == null) return false;
-            
-            // Como no hay cantidad en el modelo actual, solo podemos actualizar el ServicioId y tal vez el precio total
-            reserva.ServicioId = servicioId;
-            if (precio.HasValue)
-            {
-                reserva.PrecioTotal = precio.Value;
-            }
-            
-            await _reservaRepo.UpdateAsync(reserva);
-            return true;
-        }
-        
-        public async Task<decimal> CalcularTotalReservaAsync(Guid reservaId)
-        {
-            var reserva = await _reservaRepo.GetByIdAsync(reservaId.ToString());
-            if (reserva == null || !reserva.PrecioTotal.HasValue) return 0;
-            
-            return reserva.PrecioTotal.Value;
-        }
-
-        public async Task<bool> ReplaceServicioInReservaAsync(Guid reservaId, Guid oldServicioId, Guid newServicioId, int? cantidad, decimal? precio)
-        {
-            var reserva = await _reservaRepo.GetByIdAsync(reservaId.ToString());
-            if (reserva == null) return false;
-
-            // Si el servicio actual coincide con el que queremos reemplazar, actualizamos
-            if (reserva.ServicioId == oldServicioId)
-            {
-                reserva.ServicioId = newServicioId;
-                if (precio.HasValue)
-                {
-                    reserva.PrecioTotal = precio.Value;
-                }
-                
-                await _reservaRepo.UpdateAsync(reserva);
-                return true;
-            }
-            
-            return false;
-        }        private ReservaResponseDTO MapToDTO(Reserva r)
+        }private ReservaResponseDTO MapToDTO(Reserva r)
         {
             var dto = new ReservaResponseDTO
             {
@@ -228,33 +143,7 @@ namespace back_end.Modules.reservas.Services
                     // Ignoramos errores de reflexión aquí
                 }
             }
-            
-            return dto;
-        }
-        
-        // Implementación de métodos para TiposEvento
-        public async Task<List<TipoEventoResponseDTO>> GetAllTiposEventoAsync()
-        {
-            var tiposEvento = await _reservaRepo.GetAllTiposEventoAsync();
-            return tiposEvento.Select(te => new TipoEventoResponseDTO
-            {
-                Id = te.Id,
-                Nombre = te.Nombre,
-                Descripcion = te.Descripcion
-            }).ToList();
-        }
-
-        public async Task<TipoEventoResponseDTO?> GetTipoEventoByIdAsync(Guid id)
-        {
-            var tipoEvento = await _reservaRepo.GetTipoEventoByIdAsync(id);
-            if (tipoEvento == null) return null;
-            
-            return new TipoEventoResponseDTO
-            {
-                Id = tipoEvento.Id,
-                Nombre = tipoEvento.Nombre,
-                Descripcion = tipoEvento.Descripcion
-            };
+              return dto;
         }
     }
 }

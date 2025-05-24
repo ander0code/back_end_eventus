@@ -4,8 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using back_end.Core.Utils;
 
 namespace back_end.Modules.Item.Repositories
-{
-    public interface IItemRepository
+{    public interface IItemRepository
     {
         Task<List<Models.Item>> GetAllAsync();
         Task<Models.Item?> GetByIdAsync(Guid id);
@@ -13,6 +12,7 @@ namespace back_end.Modules.Item.Repositories
         Task<Models.Item> UpdateAsync(Models.Item item);
         Task<bool> DeleteAsync(Models.Item item);
         Task<bool> ActualizarStockAsync(Guid id, int cantidad);
+        Task<bool> ReducirStockAsync(Guid id, int cantidad);
         Task<List<Models.Item>> GetByStockBelowMinAsync(int minStock);
     }
 
@@ -78,9 +78,7 @@ namespace back_end.Modules.Item.Repositories
         {
             _context.Items.Remove(item);
             return await _context.SaveChangesAsync() > 0;
-        }
-
-        public async Task<bool> ActualizarStockAsync(Guid id, int cantidad)
+        }        public async Task<bool> ActualizarStockAsync(Guid id, int cantidad)
         {
             var item = await GetByIdAsync(id);
             if (item == null) return false;
@@ -89,6 +87,23 @@ namespace back_end.Modules.Item.Repositories
                 item.Stock = 0;
 
             item.Stock += cantidad;
+            await _context.SaveChangesAsync();
+            return true;
+        }
+        
+        public async Task<bool> ReducirStockAsync(Guid id, int cantidad)
+        {
+            var item = await GetByIdAsync(id);
+            if (item == null) return false;
+
+            if (item.Stock == null)
+                item.Stock = 0;
+                
+            // Verificamos si hay suficiente stock
+            if (item.Stock < cantidad)
+                return false;
+                
+            item.Stock -= cantidad;
             await _context.SaveChangesAsync();
             return true;
         }
