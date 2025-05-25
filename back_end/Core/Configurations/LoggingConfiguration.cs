@@ -1,6 +1,3 @@
-using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Logging;
-
 namespace back_end.Core.Configurations
 {
     public static class LoggingConfiguration
