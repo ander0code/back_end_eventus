@@ -1,5 +1,3 @@
-using Microsoft.Extensions.Configuration;
-
 namespace back_end.Core.Configurations
 {
 
