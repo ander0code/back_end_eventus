@@ -2,7 +2,6 @@ using back_end.Core.Data;
 using back_end.Modules.Auth.DTOs;
 using back_end.Modules.organizador.Models;
 using Microsoft.EntityFrameworkCore;
-using System;
 using back_end.Core.Utils;
 
 namespace back_end.Modules.Auth.Repositories

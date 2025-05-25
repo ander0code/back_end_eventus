@@ -9,7 +9,7 @@ namespace back_end.Modules.Auth.DTOs
     {
         public required string Email { get; set; }
         public required string Token { get; set; }
-        public string UserId { get; set; } = string.Empty; // Cambiado de Guid a string
+        public string UserId { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
         public string Apellido { get; set; } = string.Empty;
     }

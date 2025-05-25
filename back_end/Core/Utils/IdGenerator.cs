@@ -9,64 +9,52 @@ namespace back_end.Core.Utils
         private static readonly Dictionary<string, int> _contadores = new Dictionary<string, int>();
         private static readonly object _lock = new object();
 
-        /// <summary>
-        /// Genera un ID personalizado basado en el nombre de la tabla/entidad
-        /// </summary>
-        /// <param name="tableName">Nombre de la tabla/entidad</param>
-        /// <returns>ID en formato XXX00001-YYYY</returns>
         public static string GenerateId(string tableName)
         {
             lock (_lock) // Para evitar problemas de concurrencia
             {
-                // Obtener el prefijo de 3 letras
+
                 string prefix = GetPrefix(tableName);
                 
-                // Año actual
                 int year = DateTime.Now.Year;
                 
-                // Clave para este año y tabla
                 string counterKey = $"{tableName}_{year}";
                 
-                // Incrementar o inicializar contador
                 if (!_contadores.ContainsKey(counterKey))
                 {
                     _contadores[counterKey] = 0;
                 }
                 _contadores[counterKey]++;
                 
-                // Formatear el contador con ceros a la izquierda (5 dígitos)
                 string formattedCounter = _contadores[counterKey].ToString("D5");
-                
-                // Retornar el ID completo
+
                 return $"{prefix}{formattedCounter}-{year}";
             }
-        }        /// <summary>
-        /// Obtiene un prefijo de 3 letras a partir del nombre de la tabla
-        /// </summary>
+        }  
+
         private static string GetPrefix(string tableName)
         {
             tableName = tableName.Trim();
             
             if (string.IsNullOrEmpty(tableName))
-                return "GEN"; // Prefijo genérico si el nombre está vacío
+                return "GEN";
             
-            // Prefijos específicos para entidades conocidas
             switch (tableName.ToLower())
             {
                 case "usuario":
-                    return "UAO"; // primera (U), media (A), última (O)
+                    return "UAO";
                 case "cliente":
-                    return "CLE"; // primera (C), media (L), última (E)
+                    return "CLE";
                 case "organizador":
-                    return "ORR"; // primera (O), media (R), última (R)
+                    return "ORR";
                 case "reserva":
-                    return "REA"; // primera (R), media (E), última (A)
+                    return "REA";
                 case "pago":
-                    return "PGO"; // primera (P), media (G), última (O)
+                    return "PGO";
                 case "tipopago":
-                    return "TPO"; // primera (T), media (P), última (O)
+                    return "TPO";
                 case "item":
-                    return "ITM"; // primera (I), media (T), última (M)
+                    return "ITM";
             }
                 
             // Para otras entidades, mantener la lógica original
