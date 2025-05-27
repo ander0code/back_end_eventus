@@ -11,6 +11,8 @@ public partial class Item
 
     public int? Stock { get; set; }
 
+    public int StockDisponible { get; set; }
+
     public string? Preciobase { get; set; }
 
     public virtual ICollection<DetalleServicio> DetalleServicios { get; set; } = new List<DetalleServicio>();

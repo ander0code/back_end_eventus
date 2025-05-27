@@ -25,8 +25,8 @@ namespace back_end.Modules.Item.Controllers
         {
             try
             {
-                _logger.LogInformation("Obteniendo todos los items");
-                var items = await _service.GetAllAsync();
+                _logger.LogInformation("Obteniendo todos los items con disponibilidad");
+                var items = await _service.GetAllWithAvailabilityAsync();
                 return Ok(items);
             }
             catch (Exception ex)
@@ -44,7 +44,6 @@ namespace back_end.Modules.Item.Controllers
             {
                 _logger.LogInformation("Creando nuevo item");
                 
-                // Validación básica
                 if (string.IsNullOrWhiteSpace(dto.Nombre))
                     return BadRequest(new { message = "El nombre del item es requerido" });
                 

@@ -1,4 +1,3 @@
-
 namespace back_end.Modules.servicios.DTOs
 {
     public class DetalleServicioDTO
@@ -10,7 +9,7 @@ namespace back_end.Modules.servicios.DTOs
         public string? Estado { get; set; }
         public DateTime? Fecha { get; set; }
         public string? PrecioActual { get; set; }
-        public int? StockActual { get; set; }
+        public int StockDisponible { get; set; } 
     }
 
     public class DetalleServicioCreateDTO

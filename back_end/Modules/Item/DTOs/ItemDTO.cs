@@ -22,6 +22,12 @@ namespace back_end.Modules.Item.DTOs
         public string? Nombre { get; set; }
         public string? Descripcion { get; set; }
         public int? Stock { get; set; }
+        public int StockDisponible { get; set; }
         public string? Preciobase { get; set; }
+    }
+
+    public class ItemListResponseDTO : ItemResponseDTO
+    {
+        public int ItemsEnUso => (Stock ?? 0) - StockDisponible;
     }
 }

@@ -1,5 +1,4 @@
 using back_end.Core.Data;
-using back_end.Modules.Item.Models;
 using Microsoft.EntityFrameworkCore;
 using back_end.Core.Utils;
 
@@ -41,12 +40,10 @@ namespace back_end.Modules.Item.Repositories
 
         public async Task<Models.Item> CreateAsync(Models.Item item)
         {
-            // Si el ID es vacío, generamos un nuevo ID personalizado (convertido a Guid)
             if (item.Id == Guid.Empty)
             {
                 // Generamos un ID personalizado
                 string customId = IdGenerator.GenerateId("Item");
-                // Creamos un hash determinístico basado en el ID personalizado
                 Guid itemGuid = CreateDeterministicGuid(customId);
                 item.Id = itemGuid;
             }
@@ -55,11 +52,9 @@ namespace back_end.Modules.Item.Repositories
             await _context.SaveChangesAsync();
             return item;
         }
-        
-        // Método auxiliar para crear un Guid determinístico a partir de un string
+
         private Guid CreateDeterministicGuid(string input)
         {
-            // Usar MD5 para crear un hash determinístico (para este caso es aceptable)
             using (var md5 = System.Security.Cryptography.MD5.Create())
             {
                 byte[] hash = md5.ComputeHash(System.Text.Encoding.UTF8.GetBytes(input));
@@ -87,10 +82,15 @@ namespace back_end.Modules.Item.Repositories
                 item.Stock = 0;
 
             item.Stock += cantidad;
+            
+            // Actualizar StockDisponible
+            var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
+            item.StockDisponible = (int)(item.Stock - cantidadEnUso);
+            
             await _context.SaveChangesAsync();
             return true;
         }
-        
+
         public async Task<bool> ReducirStockAsync(Guid id, int cantidad)
         {
             var item = await GetByIdAsync(id);
@@ -100,10 +100,15 @@ namespace back_end.Modules.Item.Repositories
                 item.Stock = 0;
                 
             // Verificamos si hay suficiente stock
-            if (item.Stock < cantidad)
+            if (item.StockDisponible < cantidad)
                 return false;
                 
             item.Stock -= cantidad;
+    
+            // Actualizar StockDisponible
+            var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
+            item.StockDisponible = (int)(item.Stock - cantidadEnUso);
+    
             await _context.SaveChangesAsync();
             return true;
         }

@@ -12,6 +12,7 @@ namespace back_end.Modules.Item.Services
         Task<bool> DeleteAsync(Guid id);
         Task<List<ItemResponseDTO>> SearchByNameAsync(string term);
         Task<bool> UpdateStockAsync(Guid id, int newStock);
+        Task<List<ItemListResponseDTO>> GetAllWithAvailabilityAsync();
     }
 
     public class ItemService : IItemService
@@ -65,6 +66,7 @@ namespace back_end.Modules.Item.Services
                     Nombre = dto.Nombre,
                     Descripcion = dto.Descripcion,
                     Stock = dto.Stock,
+                    StockDisponible = 0, // Inicializamos StockDisponible en 0
                     Preciobase = dto.Preciobase
                 };
 
@@ -151,6 +153,36 @@ namespace back_end.Modules.Item.Services
             }
         }
 
+        ///  Obtener todos los items con disponibilidad
+        public async Task<List<ItemListResponseDTO>> GetAllWithAvailabilityAsync()
+        {
+            try
+            {
+                var items = await _repository.GetAllAsync();
+                return items.Select(item =>
+                {
+                    var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
+                    var stockActual = item.Stock ?? 0;
+                    item.StockDisponible = (int)(stockActual - cantidadEnUso);  // Actualizamos el StockDisponible
+                    
+                    return new ItemListResponseDTO
+                    {
+                        Id = item.Id,
+                        Nombre = item.Nombre,
+                        Descripcion = item.Descripcion,
+                        Stock = item.Stock,
+                        StockDisponible = item.StockDisponible,  // Usamos el valor actualizado
+                        Preciobase = item.Preciobase
+                    };
+                }).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener todos los items con disponibilidad");
+                return new List<ItemListResponseDTO>();
+            }
+        }
+
         private ItemResponseDTO MapToDTO(Models.Item item)
         {
             return new ItemResponseDTO
@@ -159,6 +191,7 @@ namespace back_end.Modules.Item.Services
                 Nombre = item.Nombre,
                 Descripcion = item.Descripcion,
                 Stock = item.Stock,
+                StockDisponible = item.StockDisponible,  // Agregamos el StockDisponible
                 Preciobase = item.Preciobase
             };
         }

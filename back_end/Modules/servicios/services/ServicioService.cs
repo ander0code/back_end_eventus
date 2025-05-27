@@ -2,6 +2,7 @@ using back_end.Modules.servicios.Models;
 using back_end.Modules.servicios.Repositories;
 using back_end.Modules.servicios.DTOs;
 using back_end.Modules.Item.Repositories;
+using back_end.Modules.Item.DTOs;
 
 namespace back_end.Modules.servicios.Services
 {    
@@ -203,13 +204,28 @@ namespace back_end.Modules.servicios.Services
                 if (servicio == null) return null;
 
                 var item = await _itemRepository.GetByIdAsync(dto.InventarioId);
-                if (item == null) return null;                var detalle = new DetalleServicio
+                if (item == null) return null;
+
+                // Calcular StockDisponible
+                var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
+                var stockActual = item.Stock ?? 0;
+                item.StockDisponible = (int)(stockActual - cantidadEnUso);
+
+                // Validar que la cantidad no exceda el stock disponible
+                if (dto.Cantidad > item.StockDisponible)
+                {
+                    _logger.LogWarning("La cantidad solicitada {Cantidad} excede el stock disponible {StockDisponible} del item {ItemId}", 
+                        dto.Cantidad, item.StockDisponible, item.Id);
+                    throw new InvalidOperationException($"La cantidad solicitada ({dto.Cantidad}) excede el stock disponible ({item.StockDisponible})");
+                }
+
+                var detalle = new DetalleServicio
                 {
                     Id = Guid.NewGuid(),
                     ServicioId = servicioId,
                     InventarioId = dto.InventarioId,
                     Cantidad = dto.Cantidad,
-                    Estado = dto.Estado?.Length > 10 ? dto.Estado.Substring(0, 10) : dto.Estado, // Limitamos a 10 caracteres
+                    Estado = dto.Estado?.Length > 10 ? dto.Estado.Substring(0, 10) : dto.Estado,
                     PrecioActual = dto.PrecioActual ?? item.Preciobase,
                     Fecha = DateTime.Now
                 };
@@ -218,6 +234,16 @@ namespace back_end.Modules.servicios.Services
                 
                 if (creado != null)
                 {
+                    // Recargar el item y calcular StockDisponible actualizado
+                    var itemActualizado = await _itemRepository.GetByIdAsync(creado.InventarioId ?? Guid.Empty);
+                    if (itemActualizado != null)
+                    {
+                        var cantidadEnUsoActualizada = itemActualizado.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
+                        var stockActualizado = itemActualizado.Stock ?? 0;
+                        itemActualizado.StockDisponible = (int)(stockActualizado - cantidadEnUsoActualizada);
+                        await _itemRepository.UpdateAsync(itemActualizado);
+                    }
+
                     return new DetalleServicioDTO
                     {
                         Id = creado.Id,
@@ -227,36 +253,46 @@ namespace back_end.Modules.servicios.Services
                         Estado = creado.Estado,
                         Fecha = creado.Fecha,
                         PrecioActual = creado.PrecioActual,
-                        StockActual = creado.Inventario?.Stock ?? 0
+                        StockDisponible = itemActualizado?.StockDisponible ?? 0
                     };
                 }
                 return null;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Validación fallida al agregar detalle de servicio");
+                throw; // Re-lanzamos la excepción para que el controlador la maneje
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al agregar detalle de servicio para servicio {ServicioId}", servicioId);
                 return null;
             }
-        }        public async Task<DetalleServicioDTO?> UpdateDetalleServicioAsync(Guid id, DetalleServicioUpdateDTO dto)
+        }
+    
+        public async Task<DetalleServicioDTO?> UpdateDetalleServicioAsync(Guid id, DetalleServicioUpdateDTO dto)
         {
             try
             {
                 var detalle = await _repository.GetDetalleServicioByIdAsync(id);
                 if (detalle == null) return null;
-                
+
                 detalle.Cantidad = dto.Cantidad ?? detalle.Cantidad;
-                
+
                 // Aplicamos la limitación de 10 caracteres al actualizar el estado
                 if (dto.Estado != null)
                 {
                     detalle.Estado = dto.Estado.Length > 10 ? dto.Estado.Substring(0, 10) : dto.Estado;
                 }
-                
+
                 detalle.PrecioActual = dto.PrecioActual ?? detalle.PrecioActual;
 
                 var actualizado = await _repository.UpdateDetalleServicioAsync(detalle);
                 if (actualizado != null)
                 {
+                    // Asegurarnos de recargar el item para obtener el stock actualizado
+                    var itemActualizado = await _itemRepository.GetByIdAsync(actualizado.InventarioId ?? Guid.Empty);
+
                     return new DetalleServicioDTO
                     {
                         Id = actualizado.Id,
@@ -266,7 +302,7 @@ namespace back_end.Modules.servicios.Services
                         Estado = actualizado.Estado,
                         Fecha = actualizado.Fecha,
                         PrecioActual = actualizado.PrecioActual,
-                        StockActual = actualizado.Inventario?.Stock ?? 0
+                        StockDisponible = itemActualizado?.StockDisponible ?? 0
                     };
                 }
                 return null;
@@ -337,13 +373,12 @@ namespace back_end.Modules.servicios.Services
                 Estado = result.Estado,
                 Fecha = result.Fecha,
                 PrecioActual = result.PrecioActual,
-                StockActual = result.StockActual
+                StockDisponible = result.StockDisponible  // Cambiado de StockActual a StockDisponible
             };
         }
 
         public async Task<ServicioItemDTO?> UpdateServicioItemAsync(Guid id, ServicioItemUpdateDTO dto)
         {
-            // Convertimos el DTO de entrada
             var detalleDto = new DetalleServicioUpdateDTO
             {
                 Cantidad = dto.Cantidad,
@@ -354,7 +389,10 @@ namespace back_end.Modules.servicios.Services
             var result = await UpdateDetalleServicioAsync(id, detalleDto);
             if (result == null) return null;
             
-            // Convertimos el resultado de nuevo al tipo ServicioItemDTO
+            // Obtener el item actualizado para tener el StockDisponible correcto
+            var item = await _itemRepository.GetByIdAsync(result.InventarioId ?? Guid.Empty);
+            if (item == null) return null;
+
             return new ServicioItemDTO
             {
                 Id = result.Id,
@@ -364,7 +402,7 @@ namespace back_end.Modules.servicios.Services
                 Estado = result.Estado,
                 Fecha = result.Fecha,
                 PrecioActual = result.PrecioActual,
-                StockActual = result.StockActual
+                StockDisponible = item.StockDisponible  // Usar el StockDisponible directamente del item
             };
         }
 
@@ -395,6 +433,14 @@ namespace back_end.Modules.servicios.Services
             {
                 foreach (var detalle in servicio.DetalleServicios)
                 {
+                    var item = detalle.Inventario;
+                    if (item != null)
+                    {
+                        var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
+                        var stockActual = item.Stock ?? 0;
+                        item.StockDisponible = (int)(stockActual - cantidadEnUso);
+                    }
+
                     dto.Items.Add(new ServicioItemDTO
                     {
                         Id = detalle.Id,
@@ -404,7 +450,7 @@ namespace back_end.Modules.servicios.Services
                         Estado = detalle.Estado,
                         Fecha = detalle.Fecha,
                         PrecioActual = detalle.PrecioActual,
-                        StockActual = detalle.Inventario?.Stock ?? 0
+                        StockDisponible = item?.StockDisponible ?? 0
                     });
                 }
             }
