@@ -21,6 +21,7 @@ namespace back_end.Modules.reservas.Services
         private readonly IUsuarioRepository _usuarioRepo;
         private readonly IServicioRepository _servicioRepo;
         private readonly IClienteRepository _clienteRepo;
+        private readonly ITipoEventoService _tipoEventoService;
         private readonly ILogger<ReservaService> _logger;
 
         public ReservaService(
@@ -28,12 +29,14 @@ namespace back_end.Modules.reservas.Services
             IUsuarioRepository usuarioRepo,
             IServicioRepository servicioRepo,
             IClienteRepository clienteRepo,
+            ITipoEventoService tipoEventoService,
             ILogger<ReservaService> logger)
         {
             _reservaRepo = reservaRepo;
             _usuarioRepo = usuarioRepo;
             _servicioRepo = servicioRepo;
             _clienteRepo = clienteRepo;
+            _tipoEventoService = tipoEventoService;
             _logger = logger;
         }
 
@@ -64,6 +67,13 @@ namespace back_end.Modules.reservas.Services
                 return null;
             }
 
+            // Obtener o crear el tipo de evento si se proporciona el nombre
+            Guid? tipoEventoId = null;
+            if (!string.IsNullOrEmpty(dto.TipoEventoNombre))
+            {
+                tipoEventoId = await _tipoEventoService.GetOrCreateTipoEventoAsync(dto.TipoEventoNombre);
+            }
+
             var reserva = new Reserva
             {
                 Id = IdGenerator.GenerateId("Reserva"),
@@ -71,7 +81,7 @@ namespace back_end.Modules.reservas.Services
                 NombreEvento = dto.NombreEvento,
                 FechaEjecucion = dto.FechaEjecucion,
                 FechaRegistro = DateTime.Now,
-                TiposEvento = dto.TipoEventoId,
+                TiposEvento = tipoEventoId,
                 Descripcion = dto.Descripcion,
                 Estado = dto.Estado ?? "Pendiente",
                 PrecioTotal = dto.PrecioTotal ?? 0,

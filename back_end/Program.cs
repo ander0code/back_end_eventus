@@ -74,6 +74,7 @@ builder.Services.AddScoped<IOrganizadorRepository, OrganizadorRepository>();
 // Reservas Module
 builder.Services.AddScoped<IReservaRepository, ReservaRepository>();
 builder.Services.AddScoped<IReservaService, ReservaService>();
+builder.Services.AddScoped<ITipoEventoService, TipoEventoService>();
 
 // Servicios Module
 builder.Services.AddScoped<IServicioRepository, ServicioRepository>();
