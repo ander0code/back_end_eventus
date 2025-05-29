@@ -2,6 +2,7 @@ using back_end.Modules.reservas.DTOs;
 using back_end.Modules.reservas.Models;
 using back_end.Modules.reservas.Repositories;
 using back_end.Modules.organizador.Repositories;
+using back_end.Modules.organizador.Models; 
 using back_end.Modules.servicios.Repositories;
 using back_end.Modules.clientes.Models;
 using back_end.Modules.clientes.Repositories;
@@ -55,18 +56,82 @@ namespace back_end.Modules.reservas.Services
             return reserva == null ? null : MapToDTO(reserva);
         }        public async Task<ReservaResponseDTO?> CreateAsync(ReservaCreateDTO dto)
         {
-            // Determinar el ClienteId, debe ser proporcionado directamente
             string clienteId;
             
             if (!string.IsNullOrEmpty(dto.ClienteId))
             {
                 // Usar el cliente existente
                 clienteId = dto.ClienteId;
+                _logger.LogInformation("Usando cliente existente con ID: {ClienteId}", clienteId);
+            }
+            else if (!string.IsNullOrEmpty(dto.NombreCliente) && !string.IsNullOrEmpty(dto.CorreoElectronico))
+            {
+                // Crear nuevo cliente automáticamente
+                _logger.LogInformation("Creando nuevo cliente para: {Nombre}, {Correo}", dto.NombreCliente, dto.CorreoElectronico);
+                
+                try
+                {
+                    // Verificar si ya existe un usuario con ese correo
+                    var usuarioExistente = await _usuarioRepo.GetByCorreoAsync(dto.CorreoElectronico);
+                    
+                    if (usuarioExistente != null)
+                    {
+                        // Verificar si ya existe un cliente para este usuario
+                        var clientesExistentes = await _clienteRepo.GetByCorreoUsuarioAsync(dto.CorreoElectronico);
+                        if (clientesExistentes.Any())
+                        {
+                            clienteId = clientesExistentes.First().Id;
+                            _logger.LogInformation("Cliente existente encontrado para el correo {Correo}: {ClienteId}", dto.CorreoElectronico, clienteId);
+                        }
+                        else
+                        {
+                            // Crear cliente para usuario existente
+                            var nuevoCliente = new Cliente
+                            {
+                                Id = IdGenerator.GenerateId("Cliente"),
+                                UsuarioId = usuarioExistente.Id,
+                                TipoCliente = "INDIVIDUAL" // Valor por defecto
+                            };
+                            
+                            var clienteCreado = await _clienteRepo.CreateAsync(nuevoCliente);
+                            clienteId = clienteCreado.Id;
+                            _logger.LogInformation("Nuevo cliente creado para usuario existente: {ClienteId}", clienteId);
+                        }
+                    }
+                    else
+                    {
+                        // Crear nuevo usuario y cliente
+                        var nuevoUsuario = new Usuario
+                        {
+                            Id = IdGenerator.GenerateId("Usuario"),
+                            Nombre = dto.NombreCliente,
+                            Correo = dto.CorreoElectronico,
+                            Celular = dto.Telefono
+                        };
+                        
+                        var usuarioCreado = await _usuarioRepo.CreateAsync(nuevoUsuario);
+                        
+                        var nuevoCliente = new Cliente
+                        {
+                            Id = IdGenerator.GenerateId("Cliente"),
+                            UsuarioId = usuarioCreado.Id,
+                            TipoCliente = "INDIVIDUAL" 
+                        };
+                        
+                        var clienteCreado = await _clienteRepo.CreateAsync(nuevoCliente);
+                        clienteId = clienteCreado.Id;
+                        _logger.LogInformation("Nuevo usuario y cliente creados: UsuarioId={UsuarioId}, ClienteId={ClienteId}", usuarioCreado.Id, clienteId);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error al crear cliente automáticamente para {Nombre}, {Correo}", dto.NombreCliente, dto.CorreoElectronico);
+                    return null;
+                }
             }
             else
             {
-                // No se proporcionó ClienteId y ahora es obligatorio
-                _logger.LogWarning("No se proporcionó ClienteId en la solicitud de reserva");
+                _logger.LogWarning("No se proporcionó ClienteId ni datos suficientes para crear un cliente (se requiere NombreCliente y CorreoElectronico)");
                 return null;
             }
 
