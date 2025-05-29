@@ -12,9 +12,12 @@ namespace back_end.Modules.reservas.Services
     {
         Task<List<ReservaResponseDTO>> GetAllAsync();
         Task<ReservaResponseDTO?> GetByIdAsync(Guid id);
+        Task<ReservaResponseDTO?> GetByIdStringAsync(string id);
         Task<ReservaResponseDTO?> CreateAsync(ReservaCreateDTO dto);
         Task<ReservaResponseDTO?> UpdateAsync(Guid id, ReservaUpdateDTO dto);
+        Task<ReservaResponseDTO?> UpdateByStringAsync(string id, ReservaUpdateDTO dto);
         Task<bool> DeleteAsync(Guid id);
+        Task<bool> DeleteByStringAsync(string id);
     }public class ReservaService : IReservaService
     {
         private readonly IReservaRepository _reservaRepo;
@@ -118,7 +121,42 @@ namespace back_end.Modules.reservas.Services
             if (reserva == null) return false;
             
             return await _reservaRepo.DeleteAsync(reserva);
-        }private ReservaResponseDTO MapToDTO(Reserva r)
+        }
+
+        public async Task<ReservaResponseDTO?> GetByIdStringAsync(string id)
+        {
+            var reserva = await _reservaRepo.GetByIdAsync(id);
+            return reserva == null ? null : MapToDTO(reserva);
+        }
+
+        public async Task<ReservaResponseDTO?> UpdateByStringAsync(string id, ReservaUpdateDTO dto)
+        {
+            var reserva = await _reservaRepo.GetByIdAsync(id);
+            if (reserva == null) return null;
+
+            if (dto.NombreEvento != null) reserva.NombreEvento = dto.NombreEvento;
+            if (dto.FechaEjecucion.HasValue) reserva.FechaEjecucion = dto.FechaEjecucion;
+            if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
+            if (dto.Estado != null) reserva.Estado = dto.Estado;
+            if (dto.PrecioTotal.HasValue) reserva.PrecioTotal = dto.PrecioTotal;
+            if (dto.TipoEventoId.HasValue) reserva.TiposEvento = dto.TipoEventoId;
+            if (dto.ServicioId.HasValue) reserva.ServicioId = dto.ServicioId;
+            if (dto.PrecioAdelanto.HasValue) reserva.PrecioAdelanto = dto.PrecioAdelanto;
+            
+            var actualizada = await _reservaRepo.UpdateAsync(reserva);
+            var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
+            return reservaCompleta == null ? null : MapToDTO(reservaCompleta);
+        }
+
+        public async Task<bool> DeleteByStringAsync(string id)
+        {
+            var reserva = await _reservaRepo.GetByIdAsync(id);
+            if (reserva == null) return false;
+            
+            return await _reservaRepo.DeleteAsync(reserva);
+        }
+
+        private ReservaResponseDTO MapToDTO(Reserva r)
         {
             var dto = new ReservaResponseDTO
             {
@@ -137,23 +175,31 @@ namespace back_end.Modules.reservas.Services
                 PrecioAdelanto = r.PrecioAdelanto
             };
             
-            // Intentar acceder a los campos del cliente de manera segura
+            // Obtener datos del cliente a través de la relación Usuario
             if (r.Cliente != null)
             {
-                try {
-                    var propNombre = r.Cliente.GetType().GetProperty("Nombre");
-                    if (propNombre != null) dto.NombreCliente = propNombre.GetValue(r.Cliente)?.ToString();
+                if (r.Cliente.Usuario != null)
+                {
+                    // Los datos están en la entidad Usuario
+                    dto.NombreCliente = r.Cliente.Usuario.Nombre;
+                    dto.CorreoCliente = r.Cliente.Usuario.Correo;
+                    dto.TelefonoCliente = r.Cliente.Usuario.Celular;
                     
-                    var propCorreo = r.Cliente.GetType().GetProperty("CorreoElectronico");
-                    if (propCorreo != null) dto.CorreoCliente = propCorreo.GetValue(r.Cliente)?.ToString();
-                    
-                    var propTelefono = r.Cliente.GetType().GetProperty("Telefono");
-                    if (propTelefono != null) dto.TelefonoCliente = propTelefono.GetValue(r.Cliente)?.ToString();
-                } catch (Exception) {
-                    // Ignoramos errores de reflexión aquí
+                    _logger.LogDebug("Datos del cliente obtenidos correctamente para reserva {ReservaId}: {Nombre}, {Correo}, {Telefono}", 
+                        r.Id, dto.NombreCliente, dto.CorreoCliente, dto.TelefonoCliente);
+                }
+                else
+                {
+                    _logger.LogWarning("Usuario es null para el cliente {ClienteId} en la reserva {ReservaId}. UsuarioId: {UsuarioId}", 
+                        r.ClienteId, r.Id, r.Cliente.UsuarioId);
                 }
             }
-              return dto;
+            else
+            {
+                _logger.LogWarning("Cliente es null para la reserva {ReservaId} con ClienteId: {ClienteId}", r.Id, r.ClienteId);
+            }
+              
+            return dto;
         }
     }
 }
