@@ -28,11 +28,11 @@ namespace back_end.Modules.reservas.Repositories
         {
             return await _context.Reservas
                 .Include(r => r.Cliente)
-                .ThenInclude(c => c!.Usuario) // Agregar ! para indicar que no será null
+                .ThenInclude(c => c!.Usuario) 
                 .Include(r => r.Servicio)
                 .Include(r => r.TiposEventoNavigation)
                 .Include(r => r.Pagos)
-                .AsSplitQuery() // Mejorar performance con consultas complejas
+                .AsSplitQuery() 
                 .ToListAsync();
         }
 
@@ -40,7 +40,7 @@ namespace back_end.Modules.reservas.Repositories
         {
             return await _context.Reservas
                 .Include(r => r.Cliente)
-                    .ThenInclude(c => c!.Usuario) // Agregar ! para indicar que no será null
+                    .ThenInclude(c => c!.Usuario) 
                 .Include(r => r.Servicio)
                 .Include(r => r.TiposEventoNavigation)
                 .Include(r => r.Pagos)
@@ -52,11 +52,11 @@ namespace back_end.Modules.reservas.Repositories
         {
             return await _context.Reservas
                 .Include(r => r.Cliente)
-                    .ThenInclude(c => c!.Usuario) // Agregar ! para indicar que no será null
+                    .ThenInclude(c => c!.Usuario) 
                 .Include(r => r.Servicio)
                 .Include(r => r.TiposEventoNavigation)
                 .Include(r => r.Pagos)
-                .AsSplitQuery() // Mejorar performance con consultas complejas
+                .AsSplitQuery() 
                 .FirstOrDefaultAsync(r => r.Id == id);
         }
 
