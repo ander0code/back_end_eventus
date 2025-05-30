@@ -173,9 +173,14 @@ namespace back_end.Modules.reservas.Services
             if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
             if (dto.Estado != null) reserva.Estado = dto.Estado;
             if (dto.PrecioTotal.HasValue) reserva.PrecioTotal = dto.PrecioTotal;
-            if (dto.TipoEventoId.HasValue) reserva.TiposEvento = dto.TipoEventoId;
             if (dto.ServicioId.HasValue) reserva.ServicioId = dto.ServicioId;
             if (dto.PrecioAdelanto.HasValue) reserva.PrecioAdelanto = dto.PrecioAdelanto;
+            
+            // Obtener o crear el tipo de evento si se proporciona el nombre
+            if (!string.IsNullOrEmpty(dto.TipoEventoNombre))
+            {
+                reserva.TiposEvento = await _tipoEventoService.GetOrCreateTipoEventoAsync(dto.TipoEventoNombre);
+            }
             
             var actualizada = await _reservaRepo.UpdateAsync(reserva);
             var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
@@ -204,9 +209,14 @@ namespace back_end.Modules.reservas.Services
             if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
             if (dto.Estado != null) reserva.Estado = dto.Estado;
             if (dto.PrecioTotal.HasValue) reserva.PrecioTotal = dto.PrecioTotal;
-            if (dto.TipoEventoId.HasValue) reserva.TiposEvento = dto.TipoEventoId;
             if (dto.ServicioId.HasValue) reserva.ServicioId = dto.ServicioId;
             if (dto.PrecioAdelanto.HasValue) reserva.PrecioAdelanto = dto.PrecioAdelanto;
+            
+            // Obtener o crear el tipo de evento si se proporciona el nombre
+            if (!string.IsNullOrEmpty(dto.TipoEventoNombre))
+            {
+                reserva.TiposEvento = await _tipoEventoService.GetOrCreateTipoEventoAsync(dto.TipoEventoNombre);
+            }
             
             var actualizada = await _reservaRepo.UpdateAsync(reserva);
             var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
