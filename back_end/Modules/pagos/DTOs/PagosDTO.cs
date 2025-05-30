@@ -13,13 +13,13 @@ namespace back_end.Modules.pagos.DTOs
     public class PagoCreateDTO
     {
         public string? IdReserva { get; set; }
-        public string? IdTipoPago { get; set; }
+        public string? NombreTipoPago { get; set; }
         public string? Monto { get; set; }
     }
 
     public class PagoUpdateDTO
     {
-        public string? IdTipoPago { get; set; }
+        public string? NombreTipoPago { get; set; }
         public string? Monto { get; set; }
     }
 

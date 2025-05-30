@@ -15,6 +15,8 @@ namespace back_end.Modules.pagos.Repositories
         Task<bool> DeleteAsync(Pago pago);
         Task<List<TipoPago>> GetAllTiposPagoAsync();
         Task<TipoPago?> GetTipoPagoByIdAsync(string id);
+        Task<TipoPago?> GetTipoPagoByNombreAsync(string nombre);
+        Task<TipoPago> CreateTipoPagoAsync(TipoPago tipoPago);
     }
 
     public class PagosRepository : IPagosRepository
@@ -83,6 +85,25 @@ namespace back_end.Modules.pagos.Repositories
         public async Task<TipoPago?> GetTipoPagoByIdAsync(string id)
         {
             return await _context.TipoPagos.FirstOrDefaultAsync(tp => tp.Id == id);
+        }
+
+        public async Task<TipoPago?> GetTipoPagoByNombreAsync(string nombre)
+        {
+            return await _context.TipoPagos
+                .FirstOrDefaultAsync(tp => tp.Nombre != null && tp.Nombre.ToLower() == nombre.ToLower());
+        }
+
+        public async Task<TipoPago> CreateTipoPagoAsync(TipoPago tipoPago)
+        {
+            // Generar ID personalizado si no se ha proporcionado uno
+            if (string.IsNullOrEmpty(tipoPago.Id))
+            {
+                tipoPago.Id = IdGenerator.GenerateId("TipoPago");
+            }
+            
+            _context.TipoPagos.Add(tipoPago);
+            await _context.SaveChangesAsync();
+            return tipoPago;
         }
     }
 }
