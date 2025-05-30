@@ -91,6 +91,7 @@ builder.Services.AddScoped<IClienteService, ClienteService>();
 // Pagos Module
 builder.Services.AddScoped<IPagosRepository, PagosRepository>();
 builder.Services.AddScoped<IPagosService, PagosService>();
+builder.Services.AddScoped<back_end.Modules.pagos.Services.ITipoPagoService, back_end.Modules.pagos.Services.TipoPagoService>();
 
 // Dashboard Module
 builder.Services.AddScoped<IDashboardService, DashboardService>();

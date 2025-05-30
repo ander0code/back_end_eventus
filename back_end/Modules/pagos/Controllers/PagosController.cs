@@ -1,5 +1,6 @@
 using back_end.Modules.pagos.DTOs;
 using back_end.Modules.pagos.services;
+using back_end.Modules.pagos.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
@@ -11,11 +12,13 @@ namespace back_end.Modules.pagos.Controllers
     public class PagosController : ControllerBase
     {
         private readonly IPagosService _service;
+        private readonly ITipoPagoService _tipoPagoService;
         private readonly ILogger<PagosController> _logger;
 
-        public PagosController(IPagosService service, ILogger<PagosController> logger)
+        public PagosController(IPagosService service, ITipoPagoService tipoPagoService, ILogger<PagosController> logger)
         {
             _service = service;
+            _tipoPagoService = tipoPagoService;
             _logger = logger;        }
         
         // GET: api/pagos
@@ -132,9 +135,9 @@ namespace back_end.Modules.pagos.Controllers
                     return BadRequest(new { message = "El ID de la reserva es requerido" });
                 }
                 
-                if (string.IsNullOrEmpty(dto.IdTipoPago))
+                if (string.IsNullOrWhiteSpace(dto.NombreTipoPago))
                 {
-                    return BadRequest(new { message = "El tipo de pago es requerido" });
+                    return BadRequest(new { message = "El nombre del tipo de pago es requerido" });
                 }
                 
                 if (string.IsNullOrEmpty(dto.Monto) || !decimal.TryParse(dto.Monto, out _))
@@ -155,7 +158,8 @@ namespace back_end.Modules.pagos.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al crear pago para reserva con ID: {IdReserva}", dto.IdReserva);
-                return StatusCode(500, new { message = "Error al crear pago", error = ex.Message });            }
+                return StatusCode(500, new { message = "Error al crear pago", error = ex.Message });
+            }
         }
         
         /// <summary>
@@ -197,7 +201,8 @@ namespace back_end.Modules.pagos.Controllers
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al actualizar pago con ID: {Id}", id);
-                return StatusCode(500, new { message = "Error al actualizar pago", error = ex.Message });            }
+                return StatusCode(500, new { message = "Error al actualizar pago", error = ex.Message });
+            }
         }
         
         /// <summary>
@@ -249,13 +254,14 @@ namespace back_end.Modules.pagos.Controllers
             try
             {
                 _logger.LogInformation("Obteniendo todos los tipos de pago");
-                var tiposPago = await _service.GetAllTiposPagoAsync();
+                var tiposPago = await _tipoPagoService.GetAllAsync();
                 return Ok(tiposPago);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al obtener tipos de pago");
-                return StatusCode(500, new { message = "Error al obtener tipos de pago", error = ex.Message });            }
+                return StatusCode(500, new { message = "Error al obtener tipos de pago", error = ex.Message });
+            }
         }
         
         /// <summary>
@@ -276,7 +282,7 @@ namespace back_end.Modules.pagos.Controllers
             try
             {
                 _logger.LogInformation("Obteniendo tipo de pago con ID: {Id}", id);
-                var tipoPago = await _service.GetTipoPagoByIdAsync(id);
+                var tipoPago = await _tipoPagoService.GetByIdAsync(id);
                 
                 if (tipoPago == null)
                 {
