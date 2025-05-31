@@ -161,7 +161,7 @@ namespace back_end.Modules.reservas.Services
                     var pagoAdelantoDto = new PagoCreateDTO
                     {
                         IdReserva = creada.Id,
-                        NombreTipoPago = "Adelanto",
+                        NombreTipoPago = "adelanto",
                         Monto = dto.PrecioAdelanto.Value.ToString()
                     };
 
