@@ -149,7 +149,6 @@ namespace back_end.Modules.reservas.Controllers
                 _logger.LogError(ex, "Error al eliminar reserva con ID: {ID}", id);
                 return StatusCode(500, new { message = "Error interno al eliminar la reserva" });
             }
-        }        // Los endpoints relacionados con servicios y tipos de evento han sido eliminados
-        // Solo se mantienen los endpoints básicos de CRUD de reservas
+        } 
     }
 }
