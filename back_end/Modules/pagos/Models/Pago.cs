@@ -11,6 +11,8 @@ public partial class Pago
 
     public string? Monto { get; set; }
 
+    public DateTime FechaPago { get; set; }
+
     public virtual Reserva? IdReservaNavigation { get; set; }
 
     public virtual TipoPago? IdTipoPagoNavigation { get; set; }
