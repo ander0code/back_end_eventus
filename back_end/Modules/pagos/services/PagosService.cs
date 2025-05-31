@@ -14,6 +14,8 @@ namespace back_end.Modules.pagos.services
         Task<PagoResponseDTO?> CreateAsync(PagoCreateDTO dto);
         Task<PagoResponseDTO?> UpdateAsync(string id, PagoUpdateDTO dto);
         Task<bool> DeleteAsync(string id);
+        Task<decimal> GetTotalPagadoByReservaIdAsync(string reservaId);
+        Task<DateTime?> GetUltimoPagoFechaByReservaIdAsync(string reservaId);
     }
 
     public class PagosService : IPagosService
@@ -96,6 +98,7 @@ namespace back_end.Modules.pagos.services
                     IdReserva = dto.IdReserva,
                     IdTipoPago = tipoPago.Id,
                     Monto = dto.Monto
+                    // No establecer FechaPago - se hace automáticamente en el repositorio
                 };
 
                 var creado = await _repository.CreateAsync(pago);
@@ -128,6 +131,7 @@ namespace back_end.Modules.pagos.services
                 }
 
                 if (dto.Monto != null) pago.Monto = dto.Monto;
+                // Remover actualización de FechaPago - es inmutable después de la creación
 
                 var actualizado = await _repository.UpdateAsync(pago);
                 return actualizado != null ? MapToDTO(actualizado) : null;
@@ -155,6 +159,46 @@ namespace back_end.Modules.pagos.services
             }
         }
 
+        public async Task<decimal> GetTotalPagadoByReservaIdAsync(string reservaId)
+        {
+            try
+            {
+                var pagos = await _repository.GetByReservaIdAsync(reservaId);
+                
+                decimal totalPagado = 0;
+                if (pagos != null && pagos.Any())
+                {
+                    totalPagado = pagos.Sum(p => 
+                    {
+                        if (decimal.TryParse(p.Monto, out decimal monto))
+                            return monto;
+                        return 0;
+                    });
+                }
+
+                return totalPagado;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al calcular total pagado para reserva {ReservaId}", reservaId);
+                return 0;
+            }
+        }
+
+        public async Task<DateTime?> GetUltimoPagoFechaByReservaIdAsync(string reservaId)
+        {
+            try
+            {
+                var pagos = await _repository.GetByReservaIdAsync(reservaId);
+                return pagos?.OrderByDescending(p => p.FechaPago).FirstOrDefault()?.FechaPago;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener fecha del último pago para reserva {ReservaId}", reservaId);
+                return null;
+            }
+        }
+
         private PagoResponseDTO MapToDTO(Pago pago)
         {
             return new PagoResponseDTO
@@ -164,7 +208,8 @@ namespace back_end.Modules.pagos.services
                 IdTipoPago = pago.IdTipoPago,
                 Monto = pago.Monto,
                 TipoPagoNombre = pago.IdTipoPagoNavigation?.Nombre,
-                NombreReserva = pago.IdReservaNavigation?.NombreEvento
+                NombreReserva = pago.IdReservaNavigation?.NombreEvento,
+                FechaPago = pago.FechaPago
             };
         }
     }

@@ -49,16 +49,72 @@ namespace back_end.Modules.reservas.Services
             _logger = logger;
         }
 
+        private async Task<ReservaResponseDTO> MapToDTOAsync(Reserva r)
+        {
+            // Obtener total pagado usando el servicio de pagos
+            var totalPagado = await _pagosService.GetTotalPagadoByReservaIdAsync(r.Id);
+            
+            // Obtener fecha del último pago
+            var ultimoPago = await _pagosService.GetUltimoPagoFechaByReservaIdAsync(r.Id);
+
+            var dto = new ReservaResponseDTO
+            {
+                Id = r.Id,
+                NombreEvento = r.NombreEvento,
+                FechaEjecucion = r.FechaEjecucion,
+                FechaRegistro = r.FechaRegistro,
+                Descripcion = r.Descripcion,
+                Estado = r.Estado,
+                PrecioTotal = r.PrecioTotal,
+                ClienteId = r.ClienteId,
+                TipoEventoId = r.TiposEvento,
+                TipoEventoNombre = r.TiposEventoNavigation?.Nombre,
+                ServicioId = r.ServicioId,
+                NombreServicio = r.Servicio?.Nombre,
+                PrecioAdelanto = r.PrecioAdelanto,
+                TotalPagado = totalPagado,
+                UltimoPago = ultimoPago
+            };
+            
+            if (r.Cliente != null)
+            {
+                if (r.Cliente.Usuario != null)
+                {
+                    dto.NombreCliente = r.Cliente.Usuario.Nombre;
+                    dto.CorreoCliente = r.Cliente.Usuario.Correo;
+                    dto.TelefonoCliente = r.Cliente.Usuario.Celular;
+                }
+                else
+                {
+                    _logger.LogWarning("Usuario es null para el cliente {ClienteId} en la reserva {ReservaId}. UsuarioId: {UsuarioId}", 
+                        r.ClienteId, r.Id, r.Cliente.UsuarioId);
+                }
+            }
+            else
+            {
+                _logger.LogWarning("Cliente es null para la reserva {ReservaId} con ClienteId: {ClienteId}", r.Id, r.ClienteId);
+            }
+              
+            return dto;
+        }
+
         public async Task<List<ReservaResponseDTO>> GetAllAsync()
         {
             var reservas = await _reservaRepo.GetAllAsync();
-            return reservas.Select(MapToDTO).ToList();
+            var result = new List<ReservaResponseDTO>();
+            
+            foreach (var reserva in reservas)
+            {
+                result.Add(await MapToDTOAsync(reserva));
+            }
+            
+            return result;
         }
         
         public async Task<ReservaResponseDTO?> GetByIdAsync(Guid id)
         {
             var reserva = await _reservaRepo.GetByIdAsync(id.ToString());
-            return reserva == null ? null : MapToDTO(reserva);
+            return reserva == null ? null : await MapToDTOAsync(reserva);
         }
 
         public async Task<ReservaResponseDTO?> CreateAsync(ReservaCreateDTO dto)
@@ -178,7 +234,7 @@ namespace back_end.Modules.reservas.Services
             }
 
             var reservaCompleta = await _reservaRepo.GetByIdAsync(creada.Id);
-            return reservaCompleta == null ? null : MapToDTO(reservaCompleta);
+            return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
         }
 
         public async Task<ReservaResponseDTO?> UpdateAsync(Guid id, ReservaUpdateDTO dto)
@@ -201,7 +257,7 @@ namespace back_end.Modules.reservas.Services
             
             var actualizada = await _reservaRepo.UpdateAsync(reserva);
             var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
-            return reservaCompleta == null ? null : MapToDTO(reservaCompleta);
+            return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
         }
 
         public async Task<bool> DeleteAsync(Guid id)
@@ -215,7 +271,7 @@ namespace back_end.Modules.reservas.Services
         public async Task<ReservaResponseDTO?> GetByIdStringAsync(string id)
         {
             var reserva = await _reservaRepo.GetByIdAsync(id);
-            return reserva == null ? null : MapToDTO(reserva);
+            return reserva == null ? null : await MapToDTOAsync(reserva);
         }
 
         public async Task<ReservaResponseDTO?> UpdateByStringAsync(string id, ReservaUpdateDTO dto)
@@ -238,7 +294,7 @@ namespace back_end.Modules.reservas.Services
             
             var actualizada = await _reservaRepo.UpdateAsync(reserva);
             var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
-            return reservaCompleta == null ? null : MapToDTO(reservaCompleta);
+            return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
         }
 
         public async Task<bool> DeleteByStringAsync(string id)
@@ -247,47 +303,6 @@ namespace back_end.Modules.reservas.Services
             if (reserva == null) return false;
             
             return await _reservaRepo.DeleteAsync(reserva);
-        }
-
-        private ReservaResponseDTO MapToDTO(Reserva r)
-        {
-            var dto = new ReservaResponseDTO
-            {
-                Id = r.Id,
-                NombreEvento = r.NombreEvento,
-                FechaEjecucion = r.FechaEjecucion,
-                FechaRegistro = r.FechaRegistro,
-                Descripcion = r.Descripcion,
-                Estado = r.Estado,
-                PrecioTotal = r.PrecioTotal,
-                ClienteId = r.ClienteId,
-                TipoEventoId = r.TiposEvento,
-                TipoEventoNombre = r.TiposEventoNavigation?.Nombre,
-                ServicioId = r.ServicioId,
-                NombreServicio = r.Servicio?.Nombre,
-                PrecioAdelanto = r.PrecioAdelanto
-            };
-            
-            if (r.Cliente != null)
-            {
-                if (r.Cliente.Usuario != null)
-                {
-                    dto.NombreCliente = r.Cliente.Usuario.Nombre;
-                    dto.CorreoCliente = r.Cliente.Usuario.Correo;
-                    dto.TelefonoCliente = r.Cliente.Usuario.Celular;
-                }
-                else
-                {
-                    _logger.LogWarning("Usuario es null para el cliente {ClienteId} en la reserva {ReservaId}. UsuarioId: {UsuarioId}", 
-                        r.ClienteId, r.Id, r.Cliente.UsuarioId);
-                }
-            }
-            else
-            {
-                _logger.LogWarning("Cliente es null para la reserva {ReservaId} con ClienteId: {ClienteId}", r.Id, r.ClienteId);
-            }
-              
-            return dto;
         }
     }
 }

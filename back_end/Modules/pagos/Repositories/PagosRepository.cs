@@ -59,6 +59,9 @@ namespace back_end.Modules.pagos.Repositories
                 pago.Id = IdGenerator.GenerateId("Pago");
             }
             
+            // Establecer la fecha de pago automáticamente (como FechaRegistro en reservas)
+            pago.FechaPago = DateTime.Now;
+            
             _context.Pagos.Add(pago);
             await _context.SaveChangesAsync();
             return pago;

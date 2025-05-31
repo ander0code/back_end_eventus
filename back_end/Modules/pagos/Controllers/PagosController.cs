@@ -144,6 +144,8 @@ namespace back_end.Modules.pagos.Controllers
                 {
                     return BadRequest(new { message = "El monto debe ser un valor numérico válido" });
                 }
+
+                // Remover validación de FechaPago - se crea automáticamente
                 
                 _logger.LogInformation("Creando nuevo pago para reserva con ID: {IdReserva}", dto.IdReserva);
                 var creado = await _service.CreateAsync(dto);

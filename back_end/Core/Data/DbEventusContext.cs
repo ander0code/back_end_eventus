@@ -157,33 +157,34 @@ public partial class DbEventusContext : DbContext
 
         modelBuilder.Entity<Pago>(entity =>
         {
-            entity.HasKey(e => e.Id).HasName("PK__pagos__3213E83FAC3B547F");
-
             entity.ToTable("pagos");
-
+            
             entity.Property(e => e.Id)
-                .HasMaxLength(100)
-                .IsUnicode(false)
                 .HasColumnName("id");
+            
             entity.Property(e => e.IdReserva)
-                .HasMaxLength(100)
-                .IsUnicode(false)
                 .HasColumnName("id_reserva");
+            
             entity.Property(e => e.IdTipoPago)
-                .HasMaxLength(100)
-                .IsUnicode(false)
                 .HasColumnName("id_tipoPago");
+            
             entity.Property(e => e.Monto)
-                .HasMaxLength(10)
                 .HasColumnName("monto");
+            
+            entity.Property(e => e.FechaPago)
+                .HasColumnName("fecha_pago")  // Usar el nombre real de la columna
+                .HasColumnType("datetime");
 
-            entity.HasOne(d => d.IdReservaNavigation).WithMany(p => p.Pagos)
+            // Configurar las relaciones correctamente
+            entity.HasOne(d => d.IdReservaNavigation)
+                .WithMany(p => p.Pagos)
                 .HasForeignKey(d => d.IdReserva)
-                .HasConstraintName("FK__pagos__id_reserv__4BAC3F29");
+                .HasConstraintName("FK_pagos_reserva");
 
-            entity.HasOne(d => d.IdTipoPagoNavigation).WithMany(p => p.Pagos)
+            entity.HasOne(d => d.IdTipoPagoNavigation)
+                .WithMany(p => p.Pagos)
                 .HasForeignKey(d => d.IdTipoPago)
-                .HasConstraintName("FK__pagos__id_tipoPa__4CA06362");
+                .HasConstraintName("FK_pagos_tipopago");
         });
 
         modelBuilder.Entity<Reserva>(entity =>
