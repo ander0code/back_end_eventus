@@ -8,5 +8,6 @@ namespace back_end.Modules.Auth.DTOs
         public string ContrasenaHash { get; set; } = string.Empty;
         public string Nombre { get; set; } = string.Empty;
         public string Apellido { get; set; } = string.Empty;
+        public string NombreNegocio { get; set; } = string.Empty;
     }
 }

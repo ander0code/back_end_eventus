@@ -34,8 +34,7 @@ namespace back_end.Modules.Auth.Repositories
 
             // Ahora buscamos el organizador asociado para obtener la contraseña
             var organizador = usuario.Organizadors.FirstOrDefault();
-            
-            if (organizador == null)
+              if (organizador == null)
                 return null;
 
             return new UsuarioAuthDTO
@@ -44,7 +43,8 @@ namespace back_end.Modules.Auth.Repositories
                 Correo = usuario.Correo ?? string.Empty,
                 ContrasenaHash = organizador.Contrasena ?? string.Empty,
                 Nombre = usuario.Nombre ?? string.Empty,
-                Apellido = usuario.Apellido ?? string.Empty
+                Apellido = usuario.Apellido ?? string.Empty,
+                NombreNegocio = organizador.NombreNegocio ?? string.Empty
             };
         }        public async Task<UsuarioAuthDTO> RegisterUser(RegisterRequestDTO request)
         {
@@ -74,15 +74,14 @@ namespace back_end.Modules.Auth.Repositories
             
             _context.Organizadors.Add(organizador);
             
-            await _context.SaveChangesAsync();
-
-            return new UsuarioAuthDTO
+            await _context.SaveChangesAsync();            return new UsuarioAuthDTO
             {
                 Id = usuario.Id,
                 Correo = usuario.Correo ?? string.Empty,
                 ContrasenaHash = organizador.Contrasena ?? string.Empty,
                 Nombre = usuario.Nombre ?? string.Empty,
-                Apellido = usuario.Apellido ?? string.Empty
+                Apellido = usuario.Apellido ?? string.Empty,
+                NombreNegocio = organizador.NombreNegocio ?? string.Empty
             };
         }
 

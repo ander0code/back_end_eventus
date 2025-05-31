@@ -51,7 +51,8 @@ namespace back_end.Modules.Auth.Services
                 Token = token,
                 UserId = user.Id, // Usamos el string directamente
                 Nombre = user.Nombre,
-                Apellido = user.Apellido
+                Apellido = user.Apellido,
+                NombreNegocio = user.NombreNegocio
             };
         }
 
