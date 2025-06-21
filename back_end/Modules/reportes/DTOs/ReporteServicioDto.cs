@@ -1,23 +1,52 @@
 namespace back_end.Modules.reportes.DTOs;
 
-public class ReporteServicioDto
+// Métricas para servicios
+public class ServiciosMasFrecuentesDto
 {
-    public Guid Id { get; set; }
-    public string? Nombre { get; set; }
-    public string? Descripcion { get; set; }
-    public decimal? PrecioBase { get; set; }
+    public Guid ServicioId { get; set; }
+    public string? NombreServicio { get; set; }
     public int CantidadReservas { get; set; }
-    public int CantidadDetalles { get; set; }
-    public decimal? IngresosTotales { get; set; }
-    public DateTime? UltimaReserva { get; set; }
+    public decimal PorcentajeUso { get; set; }
+    public decimal IngresoTotal { get; set; }
+    public decimal IngresoPromedio { get; set; }
 }
 
-public class ReporteServicioParametrosDto
+public class VariacionIngresosMensualesServicioDto
 {
-    public DateTime? FechaInicio { get; set; }
-    public DateTime? FechaFin { get; set; }
-    public decimal? PrecioMinimo { get; set; }
-    public decimal? PrecioMaximo { get; set; }
-    public string? Nombre { get; set; }
-    public int? ReservasMinimas { get; set; }
+    public Guid ServicioId { get; set; }
+    public string? NombreServicio { get; set; }
+    public int Año { get; set; }
+    public int Mes { get; set; }
+    public string NombreMes { get; set; } = null!;
+    public decimal MontoMensual { get; set; }
+    public int CantidadReservas { get; set; }
+    public decimal VariacionPorc { get; set; }
+}
+
+public class PromedioItemsPorServicioDto
+{
+    public Guid ServicioId { get; set; }
+    public string? NombreServicio { get; set; }
+    public decimal PromedioItemsUsados { get; set; }
+    public int TotalDetalles { get; set; }
+    public int CantidadReservas { get; set; }
+}
+
+public class ServiciosSinReservasDto
+{
+    public Guid ServicioId { get; set; }
+    public string? NombreServicio { get; set; }
+    public string? Descripcion { get; set; }
+    public decimal? PrecioBase { get; set; }
+    public int DiasInactivo { get; set; }
+}
+
+public class ServiciosEventosCanceladosDto
+{
+    public Guid ServicioId { get; set; }
+    public string? NombreServicio { get; set; }
+    public int TotalReservas { get; set; }
+    public int ReservasCanceladas { get; set; }
+    public decimal PorcentajeCancelacion { get; set; }
+    public decimal MontoPerdidasCancelacion { get; set; }
 }

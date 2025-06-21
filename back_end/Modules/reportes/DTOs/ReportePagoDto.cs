@@ -1,22 +1,47 @@
 namespace back_end.Modules.reportes.DTOs;
 
-public class ReportePagoDto
+// Métricas para pagos
+public class MontoPromedioPorPagoDto
 {
-    public string Id { get; set; } = null!;
-    public string? IdReserva { get; set; }
     public string? TipoPago { get; set; }
-    public string? Monto { get; set; }
-    public DateTime FechaPago { get; set; }
-    public string? NombreEvento { get; set; }
-    public string? ClienteRazonSocial { get; set; }
+    public decimal MontoPromedio { get; set; }
+    public int CantidadPagos { get; set; }
+    public decimal MontoTotal { get; set; }
 }
 
-public class ReportePagoParametrosDto
+public class PromediotDiasReservaPagoDto
 {
-    public DateTime? FechaInicio { get; set; }
-    public DateTime? FechaFin { get; set; }
+    public decimal PromedioDias { get; set; }
+    public int CantidadReservasConPagos { get; set; }
+    public decimal DiasMinimo { get; set; }
+    public decimal DiasMaximo { get; set; }
+}
+
+public class ReservasPagosIncompletosDto
+{
+    public string ReservaId { get; set; } = null!;
+    public string? NombreEvento { get; set; }
+    public string? ClienteRazonSocial { get; set; }
+    public decimal PrecioTotal { get; set; }
+    public decimal TotalPagado { get; set; }
+    public decimal MontoPendiente { get; set; }
+    public decimal PorcentajePagado { get; set; }
+}
+
+public class TasaUsoMetodoPagoDto
+{
     public string? TipoPago { get; set; }
-    public decimal? MontoMinimo { get; set; }
-    public decimal? MontoMaximo { get; set; }
-    public string? ClienteId { get; set; }
+    public int CantidadUsos { get; set; }
+    public decimal MontoTotal { get; set; }
+    public decimal PorcentajeUso { get; set; }
+}
+
+public class TendenciaMensualIngresosDto
+{
+    public int Año { get; set; }
+    public int Mes { get; set; }
+    public string NombreMes { get; set; } = null!;
+    public decimal MontoTotal { get; set; }
+    public int CantidadPagos { get; set; }
+    public decimal MontoPromedio { get; set; }
 }

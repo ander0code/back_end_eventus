@@ -1,21 +1,28 @@
 namespace back_end.Modules.reportes.DTOs;
 
-public class ReporteItemDto
+// Métricas para inventario/items
+public class ItemsMasUtilizadosDto
 {
-    public Guid Id { get; set; }
-    public string? Nombre { get; set; }
-    public string? Descripcion { get; set; }
-    public int? Stock { get; set; }
-    public int StockDisponible { get; set; }
-    public string? Preciobase { get; set; }
-    public int CantidadServicios { get; set; }
+    public Guid InventarioId { get; set; }
+    public string? NombreItem { get; set; }
+    public int TotalCantidadUtilizada { get; set; }
+    public int FrecuenciaUso { get; set; }
+    public decimal PromedioUsoPorServicio { get; set; }
 }
 
-public class ReporteItemParametrosDto
+public class StockPromedioPorTipoServicioDto
 {
-    public DateTime? FechaInicio { get; set; }
-    public DateTime? FechaFin { get; set; }
-    public int? StockMinimo { get; set; }
-    public int? StockMaximo { get; set; }
-    public string? Nombre { get; set; }
+    public Guid ServicioId { get; set; }
+    public string? NombreServicio { get; set; }
+    public decimal StockPromedioUtilizado { get; set; }
+    public int CantidadDetalles { get; set; }
+}
+
+public class TasaDisponibilidadDto
+{
+    public Guid InventarioId { get; set; }
+    public string? NombreItem { get; set; }
+    public int Stock { get; set; }
+    public int StockDisponible { get; set; }
+    public decimal TasaDisponibilidadPorc { get; set; }
 }

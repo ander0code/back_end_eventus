@@ -17,6 +17,8 @@ using back_end.Modules.pagos.Repositories;
 using back_end.Core.Utils;
 using back_end.Modules.pagos.services;
 using back_end.Modules.dashboard.services;
+using back_end.Modules.reportes.Repositories;
+using back_end.Modules.reportes.Services;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -95,6 +97,10 @@ builder.Services.AddScoped<back_end.Modules.pagos.Services.ITipoPagoService, bac
 
 // Dashboard Module
 builder.Services.AddScoped<IDashboardService, DashboardService>();
+
+// Reportes Module
+builder.Services.AddScoped<IReporteRepository, ReporteRepository>();
+builder.Services.AddScoped<IReporteService, ReporteService>();
 
 var app = builder.Build();
 

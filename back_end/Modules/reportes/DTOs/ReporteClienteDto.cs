@@ -1,23 +1,26 @@
 namespace back_end.Modules.reportes.DTOs;
 
-public class ReporteClienteDto
+// Métricas para clientes
+public class ClientesNuevosPorMesDto
 {
-    public string Id { get; set; } = null!;
-    public string? TipoCliente { get; set; }
-    public string? Direccion { get; set; }
-    public string? Ruc { get; set; }
-    public string? RazonSocial { get; set; }
-    public int CantidadReservas { get; set; }
-    public decimal? MontoTotalReservas { get; set; }
-    public DateTime? UltimaReserva { get; set; }
+    public int Año { get; set; }
+    public int Mes { get; set; }
+    public string NombreMes { get; set; } = null!;
+    public int CantidadClientesNuevos { get; set; }
 }
 
-public class ReporteClienteParametrosDto
+public class PromedioAdelantoPorClienteDto
 {
-    public string? TipoCliente { get; set; }
-    public DateTime? FechaRegistroInicio { get; set; }
-    public DateTime? FechaRegistroFin { get; set; }
-    public string? Ruc { get; set; }
+    public string ClienteId { get; set; } = null!;
     public string? RazonSocial { get; set; }
-    public int? ReservasMinimas { get; set; }
+    public decimal PromedioAdelantoPorc { get; set; }
+    public int CantidadReservas { get; set; }
+}
+
+public class TasaRetencionClientesDto
+{
+    public int TotalClientes { get; set; }
+    public int ClientesConMultiplesReservas { get; set; }
+    public decimal PorcentajeMultiplesReservas { get; set; }
+    public decimal TasaRetencion { get; set; }
 }

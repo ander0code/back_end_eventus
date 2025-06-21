@@ -1,30 +1,59 @@
 namespace back_end.Modules.reportes.DTOs;
 
-public class ReporteReservaDto
+// Métricas para reservas
+public class ReservasPorMesDto
 {
-    public string Id { get; set; } = null!;
-    public string? NombreEvento { get; set; }
-    public DateOnly? FechaEjecucion { get; set; }
-    public DateTime? FechaRegistro { get; set; }
-    public string? Descripcion { get; set; }
-    public string? Estado { get; set; }
-    public decimal? PrecioTotal { get; set; }
-    public string? TipoEvento { get; set; }
-    public string? ClienteRazonSocial { get; set; }
-    public string? ServicioNombre { get; set; }
-    public double? PrecioAdelanto { get; set; }
-    public int CantidadPagos { get; set; }
+    public int Año { get; set; }
+    public int Mes { get; set; }
+    public string NombreMes { get; set; } = null!;
+    public int CantidadReservas { get; set; }
+    public decimal MontoTotal { get; set; }
+    public decimal MontoPromedio { get; set; }
 }
 
-public class ReporteReservaParametrosDto
+public class IngresosPromedioPorTipoEventoDto
 {
-    public DateTime? FechaEjecucionInicio { get; set; }
-    public DateTime? FechaEjecucionFin { get; set; }
-    public DateTime? FechaRegistroInicio { get; set; }
-    public DateTime? FechaRegistroFin { get; set; }
-    public string? Estado { get; set; }
     public string? TipoEvento { get; set; }
-    public decimal? PrecioMinimo { get; set; }
-    public decimal? PrecioMaximo { get; set; }
-    public string? ClienteId { get; set; }
+    public decimal IngresoPromedio { get; set; }
+    public int CantidadReservas { get; set; }
+    public decimal IngresoTotal { get; set; }
+    public decimal IngresoMinimo { get; set; }
+    public decimal IngresoMaximo { get; set; }
+}
+
+public class ReservasAdelantoAltoDto
+{
+    public string ReservaId { get; set; } = null!;
+    public string? NombreEvento { get; set; }
+    public string? ClienteRazonSocial { get; set; }
+    public decimal PrecioTotal { get; set; }
+    public decimal MontoAdelanto { get; set; }
+    public decimal PorcentajeAdelanto { get; set; }
+}
+
+public class DuracionPromedioReservasDto
+{
+    public decimal DuracionPromedioDias { get; set; }
+    public int CantidadReservas { get; set; }
+    public decimal DuracionMinimaDias { get; set; }
+    public decimal DuracionMaximaDias { get; set; }
+}
+
+public class TasaConversionEstadoDto
+{
+    public int ReservasPendientes { get; set; }
+    public int ReservasConfirmadas { get; set; }
+    public int ReservasCanceladas { get; set; }
+    public decimal TasaConversionPendienteConfirmado { get; set; }
+    public decimal TasaCancelacion { get; set; }
+}
+
+public class DistribucionReservasPorClienteDto
+{
+    public string ClienteId { get; set; } = null!;
+    public string? RazonSocial { get; set; }
+    public int TotalReservas { get; set; }
+    public int ReservasUltimosTresMeses { get; set; }
+    public decimal MontoTotalReservas { get; set; }
+    public DateTime? UltimaReserva { get; set; }
 }
