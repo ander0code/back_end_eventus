@@ -2,6 +2,7 @@ using back_end.Modules.pagos.DTOs;
 using back_end.Modules.pagos.Models;
 using back_end.Modules.pagos.Repositories;
 using back_end.Modules.pagos.Services;
+using back_end.Core.Utils;
 using Microsoft.Extensions.Logging;
 
 namespace back_end.Modules.pagos.services
@@ -94,7 +95,7 @@ namespace back_end.Modules.pagos.services
 
                 var pago = new Pago
                 {
-                    Id = Guid.NewGuid().ToString(), // Generar un ID único
+                    Id = IdGenerator.GenerateId("Pago"), // Usar IdGenerator en lugar de Guid
                     IdReserva = dto.IdReserva,
                     IdTipoPago = tipoPago.Id,
                     Monto = dto.Monto

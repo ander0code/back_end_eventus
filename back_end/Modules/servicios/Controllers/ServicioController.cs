@@ -80,6 +80,11 @@ namespace back_end.Modules.servicios.Controllers
                 
                 return CreatedAtAction(nameof(GetById), new { id = nuevoServicio.Id }, nuevoServicio);
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning("Validación fallida al crear servicio: {Message}", ex.Message);
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al crear servicio");
