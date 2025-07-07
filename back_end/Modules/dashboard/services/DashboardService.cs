@@ -36,7 +36,7 @@ namespace back_end.Modules.dashboard.services
                 
             // Contar eventos activos (reservas confirmadas con fecha futura)
             var eventosActivos = await _context.Reservas
-                .CountAsync(r => r.Estado == "Confirmado" && 
+                .CountAsync(r => (r.Estado == "Confirmado" || r.Estado == "Pendiente") && 
                            r.FechaEjecucion >= DateOnly.FromDateTime(DateTime.Now));
                 
             // Contar todos los clientes asociados a usuarios
@@ -84,20 +84,16 @@ namespace back_end.Modules.dashboard.services
             if (usuario == null)
                 throw new Exception("Usuario no encontrado");
             
-            // Buscar todas las reservas asociadas a clientes del usuario
-            var clientesIds = await _context.Clientes
-                .Where(c => c.UsuarioId == usuario.Id)
-                .Select(c => c.Id)
-                .ToListAsync();
-            
             var fechaActual = DateOnly.FromDateTime(DateTime.Now);
             
+            // Primero intentar obtener reservas de todas las reservas (sin filtrar por cliente específico)
             var proximasReservas = await _context.Reservas
-                .Where(r => clientesIds.Contains(r.ClienteId ?? "") && 
-                           (r.Estado == "Confirmado" || r.Estado == "Pendiente") && 
+                .Where(r => (r.Estado == "Confirmado" || r.Estado == "Pendiente") && 
                            r.FechaEjecucion >= fechaActual)
                 .OrderBy(r => r.FechaEjecucion)
                 .Take(cantidad)
+                .Include(r => r.Cliente)
+                    .ThenInclude(c => c!.Usuario)
                 .Select(r => new ProximaReservaDTO
                 {
                     Id = r.Id,
@@ -108,14 +104,15 @@ namespace back_end.Modules.dashboard.services
                 })
                 .ToListAsync();
             
+            // Si no hay reservas futuras, buscar las más recientes
             if (!proximasReservas.Any())
             {
                 proximasReservas = await _context.Reservas
-                    .Where(r => clientesIds.Contains(r.ClienteId ?? "") && 
-                              (r.Estado == "Confirmado" || r.Estado == "Pendiente") &&
-                              r.FechaEjecucion >= fechaActual.AddDays(-7)) 
+                    .Where(r => (r.Estado == "Confirmado" || r.Estado == "Pendiente"))
                     .OrderByDescending(r => r.FechaEjecucion)
                     .Take(cantidad)
+                    .Include(r => r.Cliente)
+                        .ThenInclude(c => c!.Usuario)
                     .Select(r => new ProximaReservaDTO
                     {
                         Id = r.Id,
@@ -131,7 +128,9 @@ namespace back_end.Modules.dashboard.services
             {
                 Reservas = proximasReservas
             };
-        }        public async Task<ActividadRecienteDTO> GetActividadRecienteAsync(string correo, int cantidad = 10)
+        }
+
+        public async Task<ActividadRecienteDTO> GetActividadRecienteAsync(string correo, int cantidad = 10)
         {
             var usuario = await _context.Usuarios
                 .FirstOrDefaultAsync(u => u.Correo == correo);
@@ -140,18 +139,11 @@ namespace back_end.Modules.dashboard.services
                 throw new Exception("Usuario no encontrado");
 
             var userId = usuario.Id;
-            
-            // Buscar todas las reservas asociadas a clientes del usuario
-            var clientesIds = await _context.Clientes
-                .Where(c => c.UsuarioId == usuario.Id)
-                .Select(c => c.Id)
-                .ToListAsync();
                 
             var todasLasActividades = new List<ActividadRecienteItemDTO>();
 
-            // Obtener reservas recientes
+            // Obtener reservas recientes (todas las reservas, no solo del usuario)
             var nuevasReservas = await _context.Reservas
-                .Where(r => clientesIds.Contains(r.ClienteId ?? ""))
                 .OrderByDescending(r => r.FechaRegistro) 
                 .Take(cantidad)
                 .Select(r => new ActividadRecienteItemDTO
@@ -166,11 +158,12 @@ namespace back_end.Modules.dashboard.services
             
             todasLasActividades.AddRange(nuevasReservas);
             
-            // No hay campo FechaRegistro en Cliente, usamos DateTime.Now
+            // Obtener clientes recientes
             var nuevosClientes = await _context.Clientes
-                .Where(c => c.UsuarioId == usuario.Id)
+                .Include(c => c.Usuario)
                 .OrderBy(c => c.Id)
-                .Take(cantidad)                .Select(c => new ActividadRecienteItemDTO
+                .Take(cantidad)
+                .Select(c => new ActividadRecienteItemDTO
                 {
                     Id = c.Id,
                     Tipo = "Cliente",
@@ -182,11 +175,10 @@ namespace back_end.Modules.dashboard.services
             
             todasLasActividades.AddRange(nuevosClientes);
 
-            // Eventos finalizados (usando FechaEjecucion en lugar de FechaEvento)
+            // Eventos finalizados
             var eventosFinalizados = await _context.Reservas
-                .Where(r => clientesIds.Contains(r.ClienteId ?? "") && 
-                           (r.Estado == "Finalizado" || 
-                           (r.FechaEjecucion < DateOnly.FromDateTime(DateTime.Now) && r.Estado == "Confirmado")))
+                .Where(r => r.Estado == "Finalizado" || 
+                           (r.FechaEjecucion < DateOnly.FromDateTime(DateTime.Now) && r.Estado == "Confirmado"))
                 .OrderByDescending(r => r.FechaEjecucion)
                 .Take(cantidad)
                 .Select(r => new ActividadRecienteItemDTO
@@ -201,7 +193,7 @@ namespace back_end.Modules.dashboard.services
             
             todasLasActividades.AddRange(eventosFinalizados);
             
-            // Usando la tabla Items en lugar de Inventarios
+            // Nuevos items
             var nuevosItems = await _context.Items
                 .OrderBy(i => i.Id)
                 .Take(cantidad)

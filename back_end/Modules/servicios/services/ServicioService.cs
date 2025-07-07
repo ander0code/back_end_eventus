@@ -3,6 +3,7 @@ using back_end.Modules.servicios.Repositories;
 using back_end.Modules.servicios.DTOs;
 using back_end.Modules.Item.Repositories;
 using back_end.Modules.Item.DTOs;
+using back_end.Modules.Item.Services;
 
 namespace back_end.Modules.servicios.Services
 {    
@@ -32,12 +33,14 @@ namespace back_end.Modules.servicios.Services
     {
         private readonly IServicioRepository _repository;
         private readonly IItemRepository _itemRepository;
+        private readonly IItemService _itemService;
         private readonly ILogger<ServicioService> _logger;
 
-        public ServicioService(IServicioRepository repository, IItemRepository itemRepository, ILogger<ServicioService> logger)
+        public ServicioService(IServicioRepository repository, IItemRepository itemRepository, IItemService itemService, ILogger<ServicioService> logger)
         {
             _repository = repository;
             _itemRepository = itemRepository;
+            _itemService = itemService;
             _logger = logger;
         }        public async Task<List<ServicioResponseDTO>> GetAllAsync()
         {
@@ -95,10 +98,28 @@ namespace back_end.Modules.servicios.Services
                     PrecioBase = dto.PrecioBase
                 };
 
-                var creado = await _repository.CreateAsync(servicio);                if (creado != null && dto.Items != null && dto.Items.Any())
+                var creado = await _repository.CreateAsync(servicio);
+
+                if (creado != null && dto.Items != null && dto.Items.Any())
                 {
                     foreach (var itemDto in dto.Items)
                     {
+                        // Validar stock antes de agregar cada item
+                        var item = await _itemRepository.GetByIdAsync(itemDto.InventarioId);
+                        if (item != null)
+                        {
+                            var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
+                            var stockActual = item.Stock ?? 0;
+                            var stockDisponible = (int)(stockActual - cantidadEnUso);
+
+                            if (stockDisponible < itemDto.Cantidad)
+                            {
+                                _logger.LogWarning("Stock insuficiente para item {ItemNombre}: requerido {Requerido}, disponible {Disponible}", 
+                                    item.Nombre, itemDto.Cantidad, stockDisponible);
+                                throw new InvalidOperationException($"Stock insuficiente para item '{item.Nombre}': requerido {itemDto.Cantidad}, disponible {stockDisponible}");
+                            }
+                        }
+
                         var detalle = new DetalleServicio
                         {
                             Id = Guid.NewGuid(),
@@ -111,6 +132,12 @@ namespace back_end.Modules.servicios.Services
                         };
 
                         await _repository.AddDetalleServicioAsync(detalle);
+
+                        // Actualizar stock disponible después de agregar cada detalle
+                        if (item != null)
+                        {
+                            await _itemService.RecalcularStockDisponibleAsync(item.Id);
+                        }
                     }
 
                     // Recargar el servicio con sus detalles
@@ -118,6 +145,11 @@ namespace back_end.Modules.servicios.Services
                 }
 
                 return creado != null ? MapToDTO(creado) : null;
+            }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning(ex, "Validación fallida al crear servicio");
+                throw;
             }
             catch (Exception ex)
             {
@@ -206,13 +238,12 @@ namespace back_end.Modules.servicios.Services
                 var item = await _itemRepository.GetByIdAsync(dto.InventarioId);
                 if (item == null) return null;
 
-                // Calcular StockDisponible
-                var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
-                var stockActual = item.Stock ?? 0;
-                item.StockDisponible = (int)(stockActual - cantidadEnUso);
+                // Recalcular StockDisponible actualizado
+                await _itemService.RecalcularStockDisponibleAsync(dto.InventarioId);
+                item = await _itemRepository.GetByIdAsync(dto.InventarioId);
 
                 // Validar que la cantidad no exceda el stock disponible
-                if (dto.Cantidad > item.StockDisponible)
+                if (dto.Cantidad > item!.StockDisponible)
                 {
                     _logger.LogWarning("La cantidad solicitada {Cantidad} excede el stock disponible {StockDisponible} del item {ItemId}", 
                         dto.Cantidad, item.StockDisponible, item.Id);
@@ -234,15 +265,9 @@ namespace back_end.Modules.servicios.Services
                 
                 if (creado != null)
                 {
-                    // Recargar el item y calcular StockDisponible actualizado
+                    // Recalcular stock disponible después de agregar el detalle
+                    await _itemService.RecalcularStockDisponibleAsync(creado.InventarioId ?? Guid.Empty);
                     var itemActualizado = await _itemRepository.GetByIdAsync(creado.InventarioId ?? Guid.Empty);
-                    if (itemActualizado != null)
-                    {
-                        var cantidadEnUsoActualizada = itemActualizado.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
-                        var stockActualizado = itemActualizado.Stock ?? 0;
-                        itemActualizado.StockDisponible = (int)(stockActualizado - cantidadEnUsoActualizada);
-                        await _itemRepository.UpdateAsync(itemActualizado);
-                    }
 
                     return new DetalleServicioDTO
                     {
@@ -261,7 +286,7 @@ namespace back_end.Modules.servicios.Services
             catch (InvalidOperationException ex)
             {
                 _logger.LogWarning(ex, "Validación fallida al agregar detalle de servicio");
-                throw; // Re-lanzamos la excepción para que el controlador la maneje
+                throw;
             }
             catch (Exception ex)
             {
@@ -321,7 +346,16 @@ namespace back_end.Modules.servicios.Services
                 var detalle = await _repository.GetDetalleServicioByIdAsync(id);
                 if (detalle == null) return false;
 
-                return await _repository.RemoveDetalleServicioAsync(detalle);
+                var inventarioId = detalle.InventarioId;
+                var resultado = await _repository.RemoveDetalleServicioAsync(detalle);
+                
+                // Recalcular stock disponible después de eliminar el detalle
+                if (resultado && inventarioId.HasValue)
+                {
+                    await _itemService.RecalcularStockDisponibleAsync(inventarioId.Value);
+                }
+
+                return resultado;
             }
             catch (Exception ex)
             {
@@ -436,22 +470,19 @@ namespace back_end.Modules.servicios.Services
                     var item = detalle.Inventario;
                     if (item != null)
                     {
-                        var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
-                        var stockActual = item.Stock ?? 0;
-                        item.StockDisponible = (int)(stockActual - cantidadEnUso);
+                        // Usar el stock disponible ya calculado en lugar de recalcularlo aquí
+                        dto.Items.Add(new ServicioItemDTO
+                        {
+                            Id = detalle.Id,
+                            InventarioId = detalle.InventarioId ?? Guid.Empty,
+                            Cantidad = detalle.Cantidad,
+                            NombreItem = detalle.Inventario?.Nombre,
+                            Estado = detalle.Estado,
+                            Fecha = detalle.Fecha,
+                            PrecioActual = detalle.PrecioActual,
+                            StockDisponible = item.StockDisponible // Usar el valor ya calculado
+                        });
                     }
-
-                    dto.Items.Add(new ServicioItemDTO
-                    {
-                        Id = detalle.Id,
-                        InventarioId = detalle.InventarioId ?? Guid.Empty,
-                        Cantidad = detalle.Cantidad,
-                        NombreItem = detalle.Inventario?.Nombre,
-                        Estado = detalle.Estado,
-                        Fecha = detalle.Fecha,
-                        PrecioActual = detalle.PrecioActual,
-                        StockDisponible = item?.StockDisponible ?? 0
-                    });
                 }
             }
 

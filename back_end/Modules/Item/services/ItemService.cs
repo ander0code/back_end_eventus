@@ -13,6 +13,7 @@ namespace back_end.Modules.Item.Services
         Task<List<ItemResponseDTO>> SearchByNameAsync(string term);
         Task<bool> UpdateStockAsync(Guid id, int newStock);
         Task<List<ItemListResponseDTO>> GetAllWithAvailabilityAsync();
+        Task<bool> RecalcularStockDisponibleAsync(Guid id);
     }
 
     public class ItemService : IItemService
@@ -153,28 +154,107 @@ namespace back_end.Modules.Item.Services
             }
         }
 
+        /// Recalcular stock disponible basado en uso actual
+        public async Task<bool> RecalcularStockDisponibleAsync(Guid id)
+        {
+            try
+            {
+                // Obtener el item con todas sus relaciones actualizadas
+                var item = await _repository.GetByIdAsync(id);
+                if (item == null) return false;
+
+                // Calcular cantidad en uso considerando múltiples reservas del mismo servicio
+                var cantidadEnUso = await CalcularCantidadEnUsoRealAsync(item);
+                var stockActual = item.Stock ?? 0;
+                var nuevoStockDisponible = (int)(stockActual - cantidadEnUso);
+
+                // Solo actualizar si el valor cambió
+                if (item.StockDisponible != nuevoStockDisponible)
+                {
+                    item.StockDisponible = nuevoStockDisponible;
+                    await _repository.UpdateAsync(item);
+                    
+                    _logger.LogInformation("Stock recalculado para item {ItemNombre}: Total: {StockTotal}, En uso REAL: {EnUso}, Disponible: {Disponible}", 
+                        item.Nombre, stockActual, cantidadEnUso, nuevoStockDisponible);
+                }
+
+                return true;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al recalcular stock disponible para item con ID {Id}", id);
+                return false;
+            }
+        }
+
+        /// Calcular la cantidad real en uso considerando múltiples reservas
+        private async Task<double> CalcularCantidadEnUsoRealAsync(Models.Item item)
+        {
+            if (item.DetalleServicios == null || !item.DetalleServicios.Any())
+                return 0;
+
+            // Agrupar por servicio y calcular cuántas veces se usa cada servicio
+            var serviciosUsados = item.DetalleServicios
+                .Where(ds => ds.ServicioId.HasValue)
+                .GroupBy(ds => ds.ServicioId!.Value)
+                .ToList();
+
+            double cantidadTotalEnUso = 0;
+
+            foreach (var servicioGroup in serviciosUsados)
+            {
+                var servicioId = servicioGroup.Key;
+                var cantidadPorServicio = servicioGroup.Sum(ds => ds.Cantidad ?? 0);
+
+                // Contar cuántas reservas usan este servicio
+                var reservasUsandoServicio = await _repository.ContarReservasUsandoServicioAsync(servicioId);
+                
+                // Multiplicar la cantidad por el número de reservas que usan este servicio
+                var cantidadRealPorServicio = cantidadPorServicio * reservasUsandoServicio;
+                
+                cantidadTotalEnUso += cantidadRealPorServicio;
+
+                _logger.LogInformation("Servicio {ServicioId}: Cantidad base: {CantidadBase}, Reservas usando: {Reservas}, Total en uso: {TotalUso}", 
+                    servicioId, cantidadPorServicio, reservasUsandoServicio, cantidadRealPorServicio);
+            }
+
+            return cantidadTotalEnUso;
+        }
+
         ///  Obtener todos los items con disponibilidad
         public async Task<List<ItemListResponseDTO>> GetAllWithAvailabilityAsync()
         {
             try
             {
                 var items = await _repository.GetAllAsync();
-                return items.Select(item =>
+                var result = new List<ItemListResponseDTO>();
+
+                foreach (var item in items)
                 {
-                    var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
+                    // Recalcular para cada item considerando múltiples usos
+                    var cantidadEnUso = await CalcularCantidadEnUsoRealAsync(item);
                     var stockActual = item.Stock ?? 0;
-                    item.StockDisponible = (int)(stockActual - cantidadEnUso);  // Actualizamos el StockDisponible
+                    var stockDisponible = (int)(stockActual - cantidadEnUso);
+
+                    // Actualizar el modelo si es necesario
+                    if (item.StockDisponible != stockDisponible)
+                    {
+                        item.StockDisponible = stockDisponible;
+                        await _repository.UpdateAsync(item);
+                    }
                     
-                    return new ItemListResponseDTO
+                    result.Add(new ItemListResponseDTO
                     {
                         Id = item.Id,
                         Nombre = item.Nombre,
                         Descripcion = item.Descripcion,
                         Stock = item.Stock,
-                        StockDisponible = item.StockDisponible,  // Usamos el valor actualizado
+                        StockDisponible = stockDisponible,
                         Preciobase = item.Preciobase
-                    };
-                }).ToList();
+                    });
+                }
+
+                return result;
             }
             catch (Exception ex)
             {
