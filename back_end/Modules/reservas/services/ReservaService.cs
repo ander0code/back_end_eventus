@@ -294,6 +294,168 @@ namespace back_end.Modules.reservas.Services
             }
         }
 
+        public async Task<ReservaResponseDTO?> UpdateAsync(Guid id, ReservaUpdateDTO dto)
+        {
+            var reserva = await _reservaRepo.GetByIdAsync(id.ToString());
+            if (reserva == null) return null;
+
+            var estadoAnterior = reserva.Estado;
+            var servicioIdAnterior = reserva.ServicioId;
+
+            if (dto.NombreEvento != null) reserva.NombreEvento = dto.NombreEvento;
+            if (dto.FechaEjecucion.HasValue) reserva.FechaEjecucion = dto.FechaEjecucion;
+            if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
+            if (dto.Estado != null) reserva.Estado = dto.Estado;
+            if (dto.PrecioTotal.HasValue) reserva.PrecioTotal = dto.PrecioTotal;
+            if (dto.ServicioId.HasValue) reserva.ServicioId = dto.ServicioId;
+            if (dto.PrecioAdelanto.HasValue) reserva.PrecioAdelanto = dto.PrecioAdelanto;
+            
+            if (!string.IsNullOrEmpty(dto.TipoEventoNombre))
+            {
+                reserva.TiposEvento = await _tipoEventoService.GetOrCreateTipoEventoAsync(dto.TipoEventoNombre);
+            }
+            
+            var actualizada = await _reservaRepo.UpdateAsync(reserva);
+
+            // Manejar liberación de items si el estado cambió
+            await ManejarCambioEstadoReservaAsync(estadoAnterior, reserva.Estado, servicioIdAnterior, reserva.ServicioId);
+
+            var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
+            return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
+        }
+
+        public async Task<ReservaResponseDTO?> UpdateByStringAsync(string id, ReservaUpdateDTO dto)
+        {
+            var reserva = await _reservaRepo.GetByIdAsync(id);
+            if (reserva == null) return null;
+
+            var estadoAnterior = reserva.Estado;
+            var servicioIdAnterior = reserva.ServicioId;
+
+            if (dto.NombreEvento != null) reserva.NombreEvento = dto.NombreEvento;
+            if (dto.FechaEjecucion.HasValue) reserva.FechaEjecucion = dto.FechaEjecucion;
+            if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
+            if (dto.Estado != null) reserva.Estado = dto.Estado;
+            if (dto.PrecioTotal.HasValue) reserva.PrecioTotal = dto.PrecioTotal;
+            if (dto.ServicioId.HasValue) reserva.ServicioId = dto.ServicioId;
+            if (dto.PrecioAdelanto.HasValue) reserva.PrecioAdelanto = dto.PrecioAdelanto;
+            
+            if (!string.IsNullOrEmpty(dto.TipoEventoNombre))
+            {
+                reserva.TiposEvento = await _tipoEventoService.GetOrCreateTipoEventoAsync(dto.TipoEventoNombre);
+            }
+            
+            var actualizada = await _reservaRepo.UpdateAsync(reserva);
+
+            // Manejar liberación de items si el estado cambió
+            await ManejarCambioEstadoReservaAsync(estadoAnterior, reserva.Estado, servicioIdAnterior, reserva.ServicioId);
+
+            var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
+            return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
+        }
+
+        /// <summary>
+        /// Maneja los cambios de estado de las reservas y libera items cuando es necesario
+        /// </summary>
+        private async Task ManejarCambioEstadoReservaAsync(string? estadoAnterior, string? estadoNuevo, Guid? servicioIdAnterior, Guid? servicioIdNuevo)
+        {
+            try
+            {
+                var estadosLiberadores = new[] { "Finalizado", "Cancelada", "Cancelado" };
+                var estadosQueUsan = new[] { "Pendiente", "Confirmado" };
+
+                // Si el estado cambió a Finalizado o Cancelada, liberar items del servicio
+                if (!string.IsNullOrEmpty(estadoNuevo) && 
+                    estadosLiberadores.Contains(estadoNuevo, StringComparer.OrdinalIgnoreCase) &&
+                    servicioIdAnterior.HasValue)
+                {
+                    _logger.LogInformation("Liberando items del servicio {ServicioId} porque la reserva cambió a estado {Estado}", 
+                        servicioIdAnterior, estadoNuevo);
+                    
+                    await LiberarItemsServicioAsync(servicioIdAnterior.Value);
+                }
+                // Si el estado cambió de Finalizado/Cancelada a Pendiente/Confirmado, ocupar items nuevamente
+                else if (!string.IsNullOrEmpty(estadoAnterior) &&
+                         estadosLiberadores.Contains(estadoAnterior, StringComparer.OrdinalIgnoreCase) &&
+                         !string.IsNullOrEmpty(estadoNuevo) &&
+                         estadosQueUsan.Contains(estadoNuevo, StringComparer.OrdinalIgnoreCase) &&
+                         servicioIdNuevo.HasValue)
+                {
+                    _logger.LogInformation("Validando y ocupando items del servicio {ServicioId} porque la reserva cambió de {EstadoAnterior} a {EstadoNuevo}", 
+                        servicioIdNuevo, estadoAnterior, estadoNuevo);
+                    
+                    // Validar que hay stock suficiente antes de ocupar
+                    var stockValido = await ValidarStockServicioAsync(servicioIdNuevo.Value);
+                    if (!stockValido.esValido)
+                    {
+                        throw new InvalidOperationException($"No se puede cambiar el estado porque {stockValido.mensaje}");
+                    }
+                    
+                    await ActualizarStockServicioEnUsoAsync(servicioIdNuevo.Value);
+                }
+                // Si cambió el servicio, liberar el anterior y ocupar el nuevo
+                else if (servicioIdAnterior.HasValue && servicioIdNuevo.HasValue && servicioIdAnterior != servicioIdNuevo)
+                {
+                    _logger.LogInformation("Servicio cambió de {ServicioAnterior} a {ServicioNuevo}, liberando anterior y ocupando nuevo", 
+                        servicioIdAnterior, servicioIdNuevo);
+                    
+                    // Liberar items del servicio anterior
+                    await LiberarItemsServicioAsync(servicioIdAnterior.Value);
+                    
+                    // Validar y ocupar items del nuevo servicio (solo si no está en estado liberador)
+                    if (string.IsNullOrEmpty(estadoNuevo) || !estadosLiberadores.Contains(estadoNuevo, StringComparer.OrdinalIgnoreCase))
+                    {
+                        var stockValido = await ValidarStockServicioAsync(servicioIdNuevo.Value);
+                        if (!stockValido.esValido)
+                        {
+                            throw new InvalidOperationException($"No se puede cambiar el servicio porque {stockValido.mensaje}");
+                        }
+                        
+                        await ActualizarStockServicioEnUsoAsync(servicioIdNuevo.Value);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al manejar cambio de estado de reserva");
+                throw;
+            }
+        }
+
+        /// <summary>
+        /// Libera los items de un servicio recalculando el stock disponible
+        /// </summary>
+        private async Task LiberarItemsServicioAsync(Guid servicioId)
+        {
+            try
+            {
+                var servicio = await _servicioRepo.GetByIdAsync(servicioId);
+                if (servicio?.DetalleServicios != null)
+                {
+                    foreach (var detalle in servicio.DetalleServicios)
+                    {
+                        if (detalle.InventarioId.HasValue)
+                        {
+                            // Recalcular stock disponible para liberar los items
+                            await _itemService.RecalcularStockDisponibleAsync(detalle.InventarioId.Value);
+                            
+                            var item = await _itemRepository.GetByIdAsync(detalle.InventarioId.Value);
+                            if (item != null)
+                            {
+                                _logger.LogInformation("Items liberados - Item {ItemNombre}: Stock total: {StockTotal}, Disponible: {Disponible}", 
+                                    item.Nombre, item.Stock, item.StockDisponible);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al liberar items del servicio {ServicioId}", servicioId);
+                throw;
+            }
+        }
+
         private async Task<(bool esValido, string mensaje)> ValidarStockServicioAsync(Guid servicioId)
         {
             try
@@ -354,29 +516,6 @@ namespace back_end.Modules.reservas.Services
             }
         }
 
-        public async Task<ReservaResponseDTO?> UpdateAsync(Guid id, ReservaUpdateDTO dto)
-        {
-            var reserva = await _reservaRepo.GetByIdAsync(id.ToString());
-            if (reserva == null) return null;
-
-            if (dto.NombreEvento != null) reserva.NombreEvento = dto.NombreEvento;
-            if (dto.FechaEjecucion.HasValue) reserva.FechaEjecucion = dto.FechaEjecucion;
-            if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
-            if (dto.Estado != null) reserva.Estado = dto.Estado;
-            if (dto.PrecioTotal.HasValue) reserva.PrecioTotal = dto.PrecioTotal;
-            if (dto.ServicioId.HasValue) reserva.ServicioId = dto.ServicioId;
-            if (dto.PrecioAdelanto.HasValue) reserva.PrecioAdelanto = dto.PrecioAdelanto;
-            
-            if (!string.IsNullOrEmpty(dto.TipoEventoNombre))
-            {
-                reserva.TiposEvento = await _tipoEventoService.GetOrCreateTipoEventoAsync(dto.TipoEventoNombre);
-            }
-            
-            var actualizada = await _reservaRepo.UpdateAsync(reserva);
-            var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
-            return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
-        }
-
         public async Task<bool> DeleteAsync(Guid id)
         {
             var reserva = await _reservaRepo.GetByIdAsync(id.ToString());
@@ -389,29 +528,6 @@ namespace back_end.Modules.reservas.Services
         {
             var reserva = await _reservaRepo.GetByIdAsync(id);
             return reserva == null ? null : await MapToDTOAsync(reserva);
-        }
-
-        public async Task<ReservaResponseDTO?> UpdateByStringAsync(string id, ReservaUpdateDTO dto)
-        {
-            var reserva = await _reservaRepo.GetByIdAsync(id);
-            if (reserva == null) return null;
-
-            if (dto.NombreEvento != null) reserva.NombreEvento = dto.NombreEvento;
-            if (dto.FechaEjecucion.HasValue) reserva.FechaEjecucion = dto.FechaEjecucion;
-            if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
-            if (dto.Estado != null) reserva.Estado = dto.Estado;
-            if (dto.PrecioTotal.HasValue) reserva.PrecioTotal = dto.PrecioTotal;
-            if (dto.ServicioId.HasValue) reserva.ServicioId = dto.ServicioId;
-            if (dto.PrecioAdelanto.HasValue) reserva.PrecioAdelanto = dto.PrecioAdelanto;
-            
-            if (!string.IsNullOrEmpty(dto.TipoEventoNombre))
-            {
-                reserva.TiposEvento = await _tipoEventoService.GetOrCreateTipoEventoAsync(dto.TipoEventoNombre);
-            }
-            
-            var actualizada = await _reservaRepo.UpdateAsync(reserva);
-            var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
-            return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
         }
 
         public async Task<bool> DeleteByStringAsync(string id)

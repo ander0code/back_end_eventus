@@ -14,6 +14,7 @@ namespace back_end.Modules.Item.Repositories
         Task<bool> ReducirStockAsync(Guid id, int cantidad);
         Task<List<Models.Item>> GetByStockBelowMinAsync(int minStock);
         Task<int> ContarReservasUsandoServicioAsync(Guid servicioId);
+        Task<int> ContarReservasActivasUsandoServicioAsync(Guid servicioId);
     }
 
     public class ItemRepository : IItemRepository
@@ -125,17 +126,36 @@ namespace back_end.Modules.Item.Repositories
         {
             try
             {
-                // Contar cuántas reservas activas están usando este servicio
+                // Contar cuántas reservas están usando este servicio (incluyendo todas)
                 var count = await _context.Reservas
-                    .Where(r => r.ServicioId == servicioId && 
-                               (r.Estado == null || r.Estado.ToLower() != "cancelada"))
+                    .Where(r => r.ServicioId == servicioId)
                     .CountAsync();
                 
                 return count;
             }
             catch
             {
-                // Si hay error, retornar 1 para evitar problemas
+                return 1;
+            }
+        }
+
+        public async Task<int> ContarReservasActivasUsandoServicioAsync(Guid servicioId)
+        {
+            try
+            {
+                // Contar cuántas reservas ACTIVAS están usando este servicio (excluyendo Finalizadas y Canceladas)
+                var count = await _context.Reservas
+                    .Where(r => r.ServicioId == servicioId && 
+                               (r.Estado == null || 
+                                (r.Estado.ToLower() != "finalizado" && 
+                                 r.Estado.ToLower() != "cancelada" && 
+                                 r.Estado.ToLower() != "cancelado")))
+                    .CountAsync();
+                
+                return count;
+            }
+            catch
+            {
                 return 1;
             }
         }
