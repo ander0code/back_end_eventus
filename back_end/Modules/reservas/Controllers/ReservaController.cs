@@ -94,6 +94,13 @@ namespace back_end.Modules.reservas.Controllers
             catch (InvalidOperationException ex)
             {
                 _logger.LogWarning("Validación fallida al crear reserva: {Message}", ex.Message);
+                
+                // Si el mensaje contiene "Stock insuficiente", devolver 404
+                if (ex.Message.Contains("Stock insuficiente"))
+                {
+                    return NotFound(new { message = ex.Message });
+                }
+                
                 return BadRequest(new { message = ex.Message });
             }
             catch (Exception ex)
