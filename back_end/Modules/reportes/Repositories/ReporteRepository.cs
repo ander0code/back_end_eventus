@@ -500,17 +500,21 @@ public class ReporteRepository : IReporteRepository
 
         var pendientes = reservas.FirstOrDefault(r => r.Estado == "Pendiente")?.Cantidad ?? 0;
         var confirmadas = reservas.FirstOrDefault(r => r.Estado == "Confirmado")?.Cantidad ?? 0;
-        var canceladas = reservas.FirstOrDefault(r => r.Estado == "Cancelado")?.Cantidad ?? 0;
+        var canceladas = reservas.FirstOrDefault(r => r.Estado == "Cancelado" || r.Estado == "Cancelada")?.Cantidad ?? 0;
+        var finalizadas = reservas.FirstOrDefault(r => r.Estado == "Finalizado")?.Cantidad ?? 0;
 
-        var totalReservas = pendientes + confirmadas + canceladas;
+        var totalReservas = pendientes + confirmadas + canceladas + finalizadas;
+        var reservasActivas = pendientes + confirmadas;
 
         return new TasaConversionEstadoDto
         {
             ReservasPendientes = pendientes,
             ReservasConfirmadas = confirmadas,
             ReservasCanceladas = canceladas,
-            TasaConversionPendienteConfirmado = pendientes > 0 ? ((decimal)confirmadas / (pendientes + confirmadas)) * 100 : 0,
-            TasaCancelacion = totalReservas > 0 ? ((decimal)canceladas / totalReservas) * 100 : 0
+            ReservasFinalizadas = finalizadas,
+            TasaConversionPendienteConfirmado = reservasActivas > 0 ? ((decimal)confirmadas / reservasActivas) * 100 : 0,
+            TasaCancelacion = totalReservas > 0 ? ((decimal)canceladas / totalReservas) * 100 : 0,
+            TasaFinalizacion = totalReservas > 0 ? ((decimal)finalizadas / totalReservas) * 100 : 0
         };
     }
 
