@@ -14,6 +14,7 @@ namespace back_end.Modules.Item.Repositories
         Task<bool> ReducirStockAsync(string id, int cantidad);
         Task<List<Models.Item>> GetByStockBelowMinAsync(int minStock);
         Task<int> ContarReservasUsandoServicioAsync(string servicioId);
+        Task<int> ContarReservasActivasUsandoServicioAsync(string servicioId);
     }
 
     public class ItemRepository : IItemRepository
@@ -44,7 +45,7 @@ namespace back_end.Modules.Item.Repositories
             {
                 item.Id = IdGenerator.GenerateId("Item");
             }
-            
+
             _context.Items.Add(item);
             await _context.SaveChangesAsync();
             return item;
@@ -70,7 +71,8 @@ namespace back_end.Modules.Item.Repositories
         {
             _context.Items.Remove(item);
             return await _context.SaveChangesAsync() > 0;
-        }        public async Task<bool> ActualizarStockAsync(string id, int cantidad)
+        }
+        public async Task<bool> ActualizarStockAsync(string id, int cantidad)
         {
             var item = await GetByIdAsync(id);
             if (item == null) return false;
@@ -79,11 +81,11 @@ namespace back_end.Modules.Item.Repositories
                 item.Stock = 0;
 
             item.Stock += cantidad;
-            
+
             // Actualizar StockDisponible
             var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
             item.StockDisponible = (int)(item.Stock - cantidadEnUso);
-            
+
             await _context.SaveChangesAsync();
             return true;
         }
@@ -95,21 +97,21 @@ namespace back_end.Modules.Item.Repositories
 
             if (item.Stock == null)
                 item.Stock = 0;
-                
+
             // Verificamos si hay suficiente stock
             if (item.StockDisponible < cantidad)
                 return false;
-                
+
             item.Stock -= cantidad;
-    
+
             // Actualizar StockDisponible
             var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
             item.StockDisponible = (int)(item.Stock - cantidadEnUso);
-    
+
             await _context.SaveChangesAsync();
             return true;
         }
-        
+
         public async Task<List<Models.Item>> GetByStockBelowMinAsync(int minStock)
         {
             return await _context.Items
@@ -122,6 +124,27 @@ namespace back_end.Modules.Item.Repositories
             try
             {
                 // Contar cuántas reservas activas están usando este servicio
+                var count = await _context.Reservas
+                    .Where(r => r.ServicioId == servicioId &&
+                               (r.Estado == null ||
+                                (r.Estado.ToLower() != "finalizado" &&
+                                 r.Estado.ToLower() != "cancelada" &&
+                                 r.Estado.ToLower() != "cancelado")))
+                    .CountAsync();
+
+                return count;
+            }
+            catch
+            {
+                return 1;
+            }
+        }
+        
+                public async Task<int> ContarReservasActivasUsandoServicioAsync(string servicioId)
+        {
+            try
+            {
+                // Contar cuántas reservas ACTIVAS están usando este servicio (excluyendo Finalizadas y Canceladas)
                 var count = await _context.Reservas
                     .Where(r => r.ServicioId == servicioId && 
                                (r.Estado == null || 

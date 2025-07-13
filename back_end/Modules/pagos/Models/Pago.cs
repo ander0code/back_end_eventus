@@ -8,6 +8,8 @@ public partial class Pago
     public string? IdReserva { get; set; }
 
     public string? IdTipoPago { get; set; }
+    
+    public string? NombreReserva { get; set; }
 
     public string? Monto { get; set; }
 

@@ -98,6 +98,7 @@ namespace back_end.Modules.pagos.services
                     Id = IdGenerator.GenerateId("Pago"), // Usar IdGenerator en lugar de Guid
                     IdReserva = dto.IdReserva,
                     IdTipoPago = tipoPago.Id,
+                    NombreReserva = dto.NombreReserva,
                     Monto = dto.Monto
                     // No establecer FechaPago - se hace automáticamente en el repositorio
                 };
@@ -131,6 +132,7 @@ namespace back_end.Modules.pagos.services
                     pago.IdTipoPago = tipoPago.Id;
                 }
 
+                if (dto.NombreReserva != null) pago.NombreReserva = dto.NombreReserva;
                 if (dto.Monto != null) pago.Monto = dto.Monto;
                 // Remover actualización de FechaPago - es inmutable después de la creación
 
@@ -209,7 +211,7 @@ namespace back_end.Modules.pagos.services
                 IdTipoPago = pago.IdTipoPago,
                 Monto = pago.Monto,
                 TipoPagoNombre = pago.IdTipoPagoNavigation?.Nombre,
-                NombreReserva = pago.IdReservaNavigation?.NombreEvento,
+                NombreReserva = pago.NombreReserva,
                 FechaPago = pago.FechaPago
             };
         }

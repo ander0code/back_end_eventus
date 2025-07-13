@@ -170,6 +170,9 @@ public partial class DbEventusContext : DbContext
             
             entity.Property(e => e.Monto)
                 .HasColumnName("monto");
+
+            entity.Property(e => e.NombreReserva)
+                .HasColumnName("nombre_reserva");
             
             entity.Property(e => e.FechaPago)
                 .HasColumnName("fecha_pago")  // Usar el nombre real de la columna

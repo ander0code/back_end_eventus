@@ -47,7 +47,8 @@ namespace back_end.Modules.servicios.Repositories
                 .Where(s => s.Nombre != null && s.Nombre.Contains(searchTerm) || 
                            (s.Descripcion != null && s.Descripcion.Contains(searchTerm)))
                 .ToListAsync();
-        }        public async Task<Servicio?> GetByIdAsync(string id)
+        }
+        public async Task<Servicio?> GetByIdAsync(string id)
         {
             return await _context.Servicios
                 .Include(s => s.DetalleServicios)

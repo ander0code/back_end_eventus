@@ -199,7 +199,7 @@ namespace back_end.Modules.dashboard.services
                 .Take(cantidad)
                 .Select(i => new ActividadRecienteItemDTO
                 {
-                    Id = i.Id.ToString(),
+                    Id = i.Id ?? string.Empty,
                     Tipo = "Item",
                     Nombre = i.Nombre,
                     FechaRegistro = DateTime.Now.AddDays(-new Random().Next(1, 20)),

@@ -134,7 +134,7 @@ namespace back_end.Modules.servicios.Services
                         await _repository.AddDetalleServicioAsync(detalle);
 
                         // Actualizar stock disponible después de agregar cada detalle
-                        if (item != null)
+                        if (item != null && !string.IsNullOrEmpty(item.Id))
                         {
                             await _itemService.RecalcularStockDisponibleAsync(item.Id);
                         }

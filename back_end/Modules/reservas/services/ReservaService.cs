@@ -240,11 +240,19 @@ namespace back_end.Modules.reservas.Services
             {
                 try
                 {
+                    string? nombreServicio = null;
+                        if (!string.IsNullOrEmpty(dto.ServicioId))
+                        {
+                            var servicio = await _servicioRepo.GetByIdAsync(dto.ServicioId);
+                            nombreServicio = servicio?.Nombre;
+                        }
+
                     var pagoAdelantoDto = new PagoCreateDTO
                     {
                         IdReserva = creada.Id,
                         NombreTipoPago = "adelanto",
-                        Monto = dto.PrecioAdelanto.Value.ToString()
+                        Monto = dto.PrecioAdelanto.Value.ToString(),
+                        NombreReserva = nombreServicio
                     };
 
                     var pagoCreado = await _pagosService.CreateAsync(pagoAdelantoDto);
@@ -317,7 +325,7 @@ namespace back_end.Modules.reservas.Services
                     {
                         // Usar el repositorio para obtener el modelo completo
                         var item = await _itemRepository.GetByIdAsync(detalle.InventarioId);
-                        if (item != null)
+                        if (item != null && !string.IsNullOrEmpty(item.Id))
                         {
                             // Recalcular stock disponible considerando múltiples usos del servicio
                             await _itemService.RecalcularStockDisponibleAsync(item.Id);

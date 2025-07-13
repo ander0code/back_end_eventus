@@ -15,6 +15,7 @@ namespace back_end.Modules.pagos.DTOs
     {
         public string? IdReserva { get; set; }
         public string? NombreTipoPago { get; set; }
+        public string? NombreReserva { get; set; } 
         public string? Monto { get; set; }
         // FechaPago se crea automáticamente
     }
@@ -22,6 +23,8 @@ namespace back_end.Modules.pagos.DTOs
     public class PagoUpdateDTO
     {
         public string? NombreTipoPago { get; set; }
+        public string? NombreReserva { get; set; } // <-- Agrega aquí
+        
         public string? Monto { get; set; }
         // FechaPago no se puede actualizar - se estableció al crear
     }
