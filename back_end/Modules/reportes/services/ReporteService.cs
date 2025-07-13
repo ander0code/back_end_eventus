@@ -108,7 +108,7 @@ public class ReporteService : IReporteService
         return await _reporteRepository.GetServiciosMasFrecuentesAsync(fechaInicio, fechaFin, top);
     }
 
-    public async Task<IEnumerable<VariacionIngresosMensualesServicioDto>> GetVariacionIngresosMensualesServicioAsync(Guid? servicioId, DateTime? fechaInicio, DateTime? fechaFin)
+    public async Task<IEnumerable<VariacionIngresosMensualesServicioDto>> GetVariacionIngresosMensualesServicioAsync(string? servicioId, DateTime? fechaInicio, DateTime? fechaFin)
     {
         return await _reporteRepository.GetVariacionIngresosMensualesServicioAsync(servicioId, fechaInicio, fechaFin);
     }

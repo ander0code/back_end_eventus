@@ -6,14 +6,14 @@ namespace back_end.Modules.Item.Repositories
 {    public interface IItemRepository
     {
         Task<List<Models.Item>> GetAllAsync();
-        Task<Models.Item?> GetByIdAsync(Guid id);
+        Task<Models.Item?> GetByIdAsync(string id);
         Task<Models.Item> CreateAsync(Models.Item item);
         Task<Models.Item> UpdateAsync(Models.Item item);
         Task<bool> DeleteAsync(Models.Item item);
-        Task<bool> ActualizarStockAsync(Guid id, int cantidad);
-        Task<bool> ReducirStockAsync(Guid id, int cantidad);
+        Task<bool> ActualizarStockAsync(string id, int cantidad);
+        Task<bool> ReducirStockAsync(string id, int cantidad);
         Task<List<Models.Item>> GetByStockBelowMinAsync(int minStock);
-        Task<int> ContarReservasUsandoServicioAsync(Guid servicioId);
+        Task<int> ContarReservasUsandoServicioAsync(string servicioId);
     }
 
     public class ItemRepository : IItemRepository
@@ -31,8 +31,7 @@ namespace back_end.Modules.Item.Repositories
                 .Include(i => i.DetalleServicios)
                 .ToListAsync();
         }
-
-        public async Task<Models.Item?> GetByIdAsync(Guid id)
+        public async Task<Models.Item?> GetByIdAsync(string id)
         {
             return await _context.Items
                 .Include(i => i.DetalleServicios)
@@ -41,12 +40,9 @@ namespace back_end.Modules.Item.Repositories
 
         public async Task<Models.Item> CreateAsync(Models.Item item)
         {
-            if (item.Id == Guid.Empty)
+            if (string.IsNullOrEmpty(item.Id))
             {
-                // Generamos un ID personalizado
-                string customId = IdGenerator.GenerateId("Item");
-                Guid itemGuid = CreateDeterministicGuid(customId);
-                item.Id = itemGuid;
+                item.Id = IdGenerator.GenerateId("Item");
             }
             
             _context.Items.Add(item);
@@ -74,7 +70,7 @@ namespace back_end.Modules.Item.Repositories
         {
             _context.Items.Remove(item);
             return await _context.SaveChangesAsync() > 0;
-        }        public async Task<bool> ActualizarStockAsync(Guid id, int cantidad)
+        }        public async Task<bool> ActualizarStockAsync(string id, int cantidad)
         {
             var item = await GetByIdAsync(id);
             if (item == null) return false;
@@ -92,7 +88,7 @@ namespace back_end.Modules.Item.Repositories
             return true;
         }
 
-        public async Task<bool> ReducirStockAsync(Guid id, int cantidad)
+        public async Task<bool> ReducirStockAsync(string id, int cantidad)
         {
             var item = await GetByIdAsync(id);
             if (item == null) return false;
@@ -121,7 +117,7 @@ namespace back_end.Modules.Item.Repositories
                 .ToListAsync();
         }
 
-        public async Task<int> ContarReservasUsandoServicioAsync(Guid servicioId)
+        public async Task<int> ContarReservasUsandoServicioAsync(string servicioId)
         {
             try
             {

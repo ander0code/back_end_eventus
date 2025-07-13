@@ -4,7 +4,7 @@ using back_end.Modules.reservas.Models;
 
 public partial class Servicio
 {
-    public Guid Id { get; set; }
+    public string? Id { get; set; }
 
     public string? Nombre { get; set; }
 

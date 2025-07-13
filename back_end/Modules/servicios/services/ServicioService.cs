@@ -2,8 +2,8 @@ using back_end.Modules.servicios.Models;
 using back_end.Modules.servicios.Repositories;
 using back_end.Modules.servicios.DTOs;
 using back_end.Modules.Item.Repositories;
-using back_end.Modules.Item.DTOs;
 using back_end.Modules.Item.Services;
+using back_end.Core.Utils;
 
 namespace back_end.Modules.servicios.Services
 {    
@@ -11,22 +11,22 @@ namespace back_end.Modules.servicios.Services
     {
         Task<List<ServicioResponseDTO>> GetAllAsync();
         Task<List<ServicioResponseDTO>> SearchServiciosAsync(string searchTerm);
-        Task<ServicioResponseDTO?> GetByIdAsync(Guid id);
+        Task<ServicioResponseDTO?> GetByIdAsync(string id);
         Task<ServicioResponseDTO?> CreateAsync(ServicioCreateDTO dto);
-        Task<ServicioResponseDTO?> UpdateAsync(Guid id, ServicioUpdateDTO dto);
-        Task<bool> DeleteAsync(Guid id);
+        Task<ServicioResponseDTO?> UpdateAsync(string id, ServicioUpdateDTO dto);
+        Task<bool> DeleteAsync(string id);
         
         // Métodos para DetalleServicio
-        Task<DetalleServicioDTO?> AddDetalleServicioAsync(Guid servicioId, DetalleServicioCreateDTO dto);
-        Task<DetalleServicioDTO?> UpdateDetalleServicioAsync(Guid id, DetalleServicioUpdateDTO dto);
-        Task<bool> RemoveDetalleServicioAsync(Guid id);
-        Task<bool> RemoveMultipleDetalleServiciosAsync(Guid servicioId, DetalleServicioDeleteDTO dto);
+        Task<DetalleServicioDTO?> AddDetalleServicioAsync(string servicioId, DetalleServicioCreateDTO dto);
+        Task<DetalleServicioDTO?> UpdateDetalleServicioAsync(string id, DetalleServicioUpdateDTO dto);
+        Task<bool> RemoveDetalleServicioAsync(string id);
+        Task<bool> RemoveMultipleDetalleServiciosAsync(string servicioId, DetalleServicioDeleteDTO dto);
         
         // Métodos de compatibilidad para servicioItem
-        Task<ServicioItemDTO?> AddServicioItemAsync(Guid servicioId, ServicioItemCreateDTO dto);
-        Task<ServicioItemDTO?> UpdateServicioItemAsync(Guid id, ServicioItemUpdateDTO dto);
-        Task<bool> RemoveServicioItemAsync(Guid id);
-        Task<bool> RemoveMultipleServicioItemsAsync(Guid servicioId, ServicioItemsDeleteDTO dto);
+        Task<ServicioItemDTO?> AddServicioItemAsync(string servicioId, ServicioItemCreateDTO dto);
+        Task<ServicioItemDTO?> UpdateServicioItemAsync(string id, ServicioItemUpdateDTO dto);
+        Task<bool> RemoveServicioItemAsync(string id);
+        Task<bool> RemoveMultipleServicioItemsAsync(string servicioId, ServicioItemsDeleteDTO dto);
     }
 
     public class ServicioService : IServicioService
@@ -72,7 +72,7 @@ namespace back_end.Modules.servicios.Services
             }
         }
 
-        public async Task<ServicioResponseDTO?> GetByIdAsync(Guid id)
+        public async Task<ServicioResponseDTO?> GetByIdAsync(string id)
         {
             try
             {
@@ -92,7 +92,7 @@ namespace back_end.Modules.servicios.Services
             {
                 var servicio = new Servicio
                 {
-                    Id = Guid.NewGuid(),
+                    Id = IdGenerator.GenerateId("Servicios"),
                     Nombre = dto.NombreServicio,
                     Descripcion = dto.Descripcion,
                     PrecioBase = dto.PrecioBase
@@ -105,7 +105,7 @@ namespace back_end.Modules.servicios.Services
                     foreach (var itemDto in dto.Items)
                     {
                         // Validar stock antes de agregar cada item
-                        var item = await _itemRepository.GetByIdAsync(itemDto.InventarioId);
+                        var item = await _itemRepository.GetByIdAsync(itemDto.InventarioId!);
                         if (item != null)
                         {
                             var cantidadEnUso = item.DetalleServicios?.Sum(ds => ds.Cantidad) ?? 0;
@@ -122,7 +122,7 @@ namespace back_end.Modules.servicios.Services
 
                         var detalle = new DetalleServicio
                         {
-                            Id = Guid.NewGuid(),
+                            Id = IdGenerator.GenerateId("DetalleServicio"),
                             ServicioId = servicio.Id,
                             InventarioId = itemDto.InventarioId,
                             Cantidad = itemDto.Cantidad,
@@ -158,7 +158,7 @@ namespace back_end.Modules.servicios.Services
             }
         }
         
-        public async Task<ServicioResponseDTO?> UpdateAsync(Guid id, ServicioUpdateDTO dto)
+        public async Task<ServicioResponseDTO?> UpdateAsync(string id, ServicioUpdateDTO dto)
         {
             try
             {
@@ -175,9 +175,10 @@ namespace back_end.Modules.servicios.Services
                 if (actualizado != null && dto.ItemsToAdd != null && dto.ItemsToAdd.Any())
                 {
                     foreach (var itemDto in dto.ItemsToAdd)
-                    {                        var detalle = new DetalleServicio
+                    {
+                        var detalle = new DetalleServicio
                         {
-                            Id = Guid.NewGuid(),
+                            Id = IdGenerator.GenerateId("DetalleServicio"),
                             ServicioId = servicio.Id,
                             InventarioId = itemDto.InventarioId,
                             Cantidad = itemDto.Cantidad,
@@ -193,8 +194,9 @@ namespace back_end.Modules.servicios.Services
                 // Eliminar items si se solicita
                 if (actualizado != null && dto.ItemsToRemove != null && dto.ItemsToRemove.Any())
                 {
-                    var detalles = await _repository.GetDetalleServiciosByServicioIdAsync(servicio.Id);
-                    var detallesToRemove = detalles.Where(d => dto.ItemsToRemove.Contains(d.Id)).ToList();
+                    var detalles = await _repository.GetDetalleServiciosByServicioIdAsync(servicio.Id!);
+                    var detallesToRemove = detalles.Where(d => dto.ItemsToRemove.Contains(d.Id!)).ToList();
+                    
                     if (detallesToRemove.Any())
                     {
                         await _repository.RemoveMultipleDetalleServiciosAsync(detallesToRemove);
@@ -211,7 +213,7 @@ namespace back_end.Modules.servicios.Services
             }
         }
         
-        public async Task<bool> DeleteAsync(Guid id)
+        public async Task<bool> DeleteAsync(string id)
         {
             try
             {
@@ -228,19 +230,19 @@ namespace back_end.Modules.servicios.Services
         }
 
         // DetalleServicio methods
-        public async Task<DetalleServicioDTO?> AddDetalleServicioAsync(Guid servicioId, DetalleServicioCreateDTO dto)
+        public async Task<DetalleServicioDTO?> AddDetalleServicioAsync(string servicioId, DetalleServicioCreateDTO dto)
         {
             try
             {
                 var servicio = await _repository.GetByIdAsync(servicioId);
                 if (servicio == null) return null;
 
-                var item = await _itemRepository.GetByIdAsync(dto.InventarioId);
+                var item = await _itemRepository.GetByIdAsync(dto.InventarioId!);
                 if (item == null) return null;
 
                 // Recalcular StockDisponible actualizado
-                await _itemService.RecalcularStockDisponibleAsync(dto.InventarioId);
-                item = await _itemRepository.GetByIdAsync(dto.InventarioId);
+                await _itemService.RecalcularStockDisponibleAsync(dto.InventarioId!);
+                item = await _itemRepository.GetByIdAsync(dto.InventarioId!);
 
                 // Validar que la cantidad no exceda el stock disponible
                 if (dto.Cantidad > item!.StockDisponible)
@@ -252,7 +254,7 @@ namespace back_end.Modules.servicios.Services
 
                 var detalle = new DetalleServicio
                 {
-                    Id = Guid.NewGuid(),
+                    Id = IdGenerator.GenerateId("DetalleServicio"),
                     ServicioId = servicioId,
                     InventarioId = dto.InventarioId,
                     Cantidad = dto.Cantidad,
@@ -266,8 +268,8 @@ namespace back_end.Modules.servicios.Services
                 if (creado != null)
                 {
                     // Recalcular stock disponible después de agregar el detalle
-                    await _itemService.RecalcularStockDisponibleAsync(creado.InventarioId ?? Guid.Empty);
-                    var itemActualizado = await _itemRepository.GetByIdAsync(creado.InventarioId ?? Guid.Empty);
+                    await _itemService.RecalcularStockDisponibleAsync(creado.InventarioId!);
+                    var itemActualizado = await _itemRepository.GetByIdAsync(creado.InventarioId!);
 
                     return new DetalleServicioDTO
                     {
@@ -295,7 +297,7 @@ namespace back_end.Modules.servicios.Services
             }
         }
     
-        public async Task<DetalleServicioDTO?> UpdateDetalleServicioAsync(Guid id, DetalleServicioUpdateDTO dto)
+        public async Task<DetalleServicioDTO?> UpdateDetalleServicioAsync(string id, DetalleServicioUpdateDTO dto)
         {
             try
             {
@@ -315,8 +317,11 @@ namespace back_end.Modules.servicios.Services
                 var actualizado = await _repository.UpdateDetalleServicioAsync(detalle);
                 if (actualizado != null)
                 {
+                    // Recalcular stock disponible después de actualizar
+                    await _itemService.RecalcularStockDisponibleAsync(actualizado.InventarioId!);
+                    
                     // Asegurarnos de recargar el item para obtener el stock actualizado
-                    var itemActualizado = await _itemRepository.GetByIdAsync(actualizado.InventarioId ?? Guid.Empty);
+                    var itemActualizado = await _itemRepository.GetByIdAsync(actualizado.InventarioId!);
 
                     return new DetalleServicioDTO
                     {
@@ -339,7 +344,7 @@ namespace back_end.Modules.servicios.Services
             }
         }
 
-        public async Task<bool> RemoveDetalleServicioAsync(Guid id)
+        public async Task<bool> RemoveDetalleServicioAsync(string id)
         {
             try
             {
@@ -350,9 +355,9 @@ namespace back_end.Modules.servicios.Services
                 var resultado = await _repository.RemoveDetalleServicioAsync(detalle);
                 
                 // Recalcular stock disponible después de eliminar el detalle
-                if (resultado && inventarioId.HasValue)
+                if (resultado && !string.IsNullOrEmpty(inventarioId))
                 {
-                    await _itemService.RecalcularStockDisponibleAsync(inventarioId.Value);
+                    await _itemService.RecalcularStockDisponibleAsync(inventarioId);
                 }
 
                 return resultado;
@@ -364,14 +369,14 @@ namespace back_end.Modules.servicios.Services
             }
         }
 
-        public async Task<bool> RemoveMultipleDetalleServiciosAsync(Guid servicioId, DetalleServicioDeleteDTO dto)
+        public async Task<bool> RemoveMultipleDetalleServiciosAsync(string servicioId, DetalleServicioDeleteDTO dto)
         {
             try
             {
                 if (dto.ItemIds == null || !dto.ItemIds.Any()) return false;
 
                 var detalles = await _repository.GetDetalleServiciosByServicioIdAsync(servicioId);
-                var detallesToRemove = detalles.Where(d => dto.ItemIds.Contains(d.Id)).ToList();
+                var detallesToRemove = detalles.Where(d => dto.ItemIds.Contains(d.Id!)).ToList();
 
                 if (!detallesToRemove.Any()) return false;
 
@@ -382,8 +387,8 @@ namespace back_end.Modules.servicios.Services
                 _logger.LogError(ex, "Error al eliminar múltiples detalles de servicio para servicio {ServicioId}", servicioId);
                 return false;
             }
-        }        // Métodos de compatibilidad para servicioItem
-        public async Task<ServicioItemDTO?> AddServicioItemAsync(Guid servicioId, ServicioItemCreateDTO dto)
+        }      // Métodos de compatibilidad para servicioItem
+        public async Task<ServicioItemDTO?> AddServicioItemAsync(string servicioId, ServicioItemCreateDTO dto)
         {
             // Convertimos el DTO de entrada
             var detalleDto = new DetalleServicioCreateDTO
@@ -411,7 +416,7 @@ namespace back_end.Modules.servicios.Services
             };
         }
 
-        public async Task<ServicioItemDTO?> UpdateServicioItemAsync(Guid id, ServicioItemUpdateDTO dto)
+        public async Task<ServicioItemDTO?> UpdateServicioItemAsync(string id, ServicioItemUpdateDTO dto)
         {
             var detalleDto = new DetalleServicioUpdateDTO
             {
@@ -424,7 +429,7 @@ namespace back_end.Modules.servicios.Services
             if (result == null) return null;
             
             // Obtener el item actualizado para tener el StockDisponible correcto
-            var item = await _itemRepository.GetByIdAsync(result.InventarioId ?? Guid.Empty);
+            var item = await _itemRepository.GetByIdAsync(result.InventarioId!);
             if (item == null) return null;
 
             return new ServicioItemDTO
@@ -439,11 +444,12 @@ namespace back_end.Modules.servicios.Services
                 StockDisponible = item.StockDisponible  // Usar el StockDisponible directamente del item
             };
         }
-
-        public Task<bool> RemoveServicioItemAsync(Guid id)
+        public Task<bool> RemoveServicioItemAsync(string id)
         {
             return RemoveDetalleServicioAsync(id);
-        }        public async Task<bool> RemoveMultipleServicioItemsAsync(Guid servicioId, ServicioItemsDeleteDTO dto)
+        }        
+
+        public async Task<bool> RemoveMultipleServicioItemsAsync(string servicioId, ServicioItemsDeleteDTO dto)
         {
             // Convertimos el DTO de entrada
             var detalleDto = new DetalleServicioDeleteDTO
@@ -452,7 +458,9 @@ namespace back_end.Modules.servicios.Services
             };
             
             return await RemoveMultipleDetalleServiciosAsync(servicioId, detalleDto);
-        }        private ServicioResponseDTO MapToDTO(Servicio servicio)
+        }
+
+        private ServicioResponseDTO MapToDTO(Servicio servicio)
         {
             var dto = new ServicioResponseDTO
             {
@@ -474,7 +482,7 @@ namespace back_end.Modules.servicios.Services
                         dto.Items.Add(new ServicioItemDTO
                         {
                             Id = detalle.Id,
-                            InventarioId = detalle.InventarioId ?? Guid.Empty,
+                            InventarioId = detalle.InventarioId,
                             Cantidad = detalle.Cantidad,
                             NombreItem = detalle.Inventario?.Nombre,
                             Estado = detalle.Estado,

@@ -3,7 +3,7 @@ namespace back_end.Modules.reportes.DTOs;
 // Métricas para inventario/items
 public class ItemsMasUtilizadosDto
 {
-    public Guid InventarioId { get; set; }
+    public string? InventarioId { get; set; }
     public string? NombreItem { get; set; }
     public int TotalCantidadUtilizada { get; set; }
     public int FrecuenciaUso { get; set; }
@@ -12,7 +12,7 @@ public class ItemsMasUtilizadosDto
 
 public class StockPromedioPorTipoServicioDto
 {
-    public Guid ServicioId { get; set; }
+    public string? ServicioId { get; set; }
     public string? NombreServicio { get; set; }
     public decimal StockPromedioUtilizado { get; set; }
     public int CantidadDetalles { get; set; }
@@ -20,7 +20,7 @@ public class StockPromedioPorTipoServicioDto
 
 public class TasaDisponibilidadDto
 {
-    public Guid InventarioId { get; set; }
+    public string? InventarioId { get; set; }
     public string? NombreItem { get; set; }
     public int Stock { get; set; }
     public int StockDisponible { get; set; }

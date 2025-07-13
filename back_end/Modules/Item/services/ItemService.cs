@@ -1,19 +1,19 @@
 using back_end.Modules.Item.DTOs;
 using back_end.Modules.Item.Repositories;
-
+using back_end.Core.Utils;
 namespace back_end.Modules.Item.Services
 {
     public interface IItemService
     {
         Task<List<ItemResponseDTO>> GetAllAsync();
-        Task<ItemResponseDTO?> GetByIdAsync(Guid id);
+        Task<ItemResponseDTO?> GetByIdAsync(string id);
         Task<ItemResponseDTO?> CreateAsync(ItemCreateDTO dto);
-        Task<ItemResponseDTO?> UpdateAsync(Guid id, ItemUpdateDTO dto);
-        Task<bool> DeleteAsync(Guid id);
+        Task<ItemResponseDTO?> UpdateAsync(string id, ItemUpdateDTO dto);
+        Task<bool> DeleteAsync(string id);
         Task<List<ItemResponseDTO>> SearchByNameAsync(string term);
-        Task<bool> UpdateStockAsync(Guid id, int newStock);
+        Task<bool> UpdateStockAsync(string id, int newStock);
         Task<List<ItemListResponseDTO>> GetAllWithAvailabilityAsync();
-        Task<bool> RecalcularStockDisponibleAsync(Guid id);
+        Task<bool> RecalcularStockDisponibleAsync(string id);
     }
 
     public class ItemService : IItemService
@@ -42,7 +42,7 @@ namespace back_end.Modules.Item.Services
             }
         }
 
-        public async Task<ItemResponseDTO?> GetByIdAsync(Guid id)
+        public async Task<ItemResponseDTO?> GetByIdAsync(string id)
         {
             try
             {
@@ -63,7 +63,7 @@ namespace back_end.Modules.Item.Services
             {
                 var item = new Models.Item
                 {
-                    Id = Guid.NewGuid(),
+                    Id = IdGenerator.GenerateId("Item"),
                     Nombre = dto.Nombre,
                     Descripcion = dto.Descripcion,
                     Stock = dto.Stock,
@@ -82,7 +82,7 @@ namespace back_end.Modules.Item.Services
         }
         
         ///  Actualizar item
-        public async Task<ItemResponseDTO?> UpdateAsync(Guid id, ItemUpdateDTO dto)
+        public async Task<ItemResponseDTO?> UpdateAsync(string id, ItemUpdateDTO dto)
         {
             try
             {
@@ -105,7 +105,7 @@ namespace back_end.Modules.Item.Services
         }
 
         ///  Eliminar item
-        public async Task<bool> DeleteAsync(Guid id)
+        public async Task<bool> DeleteAsync(string id)
         {
             try
             {
@@ -141,7 +141,7 @@ namespace back_end.Modules.Item.Services
         }
 
         ///  actualizar stock
-        public async Task<bool> UpdateStockAsync(Guid id, int newStock)
+        public async Task<bool> UpdateStockAsync(string id, int newStock)
         {
             try
             {
@@ -155,7 +155,7 @@ namespace back_end.Modules.Item.Services
         }
 
         /// Recalcular stock disponible basado en uso actual
-        public async Task<bool> RecalcularStockDisponibleAsync(Guid id)
+        public async Task<bool> RecalcularStockDisponibleAsync(string id)
         {
             try
             {
@@ -195,8 +195,8 @@ namespace back_end.Modules.Item.Services
 
             // Agrupar por servicio y calcular cuántas veces se usa cada servicio
             var serviciosUsados = item.DetalleServicios
-                .Where(ds => ds.ServicioId.HasValue)
-                .GroupBy(ds => ds.ServicioId!.Value)
+                .Where(ds => !string.IsNullOrEmpty(ds.ServicioId)) // Cambia HasValue por !string.IsNullOrEmpty
+                .GroupBy(ds => ds.ServicioId!) // Agrupa por el string ServicioId
                 .ToList();
 
             double cantidadTotalEnUso = 0;

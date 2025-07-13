@@ -47,32 +47,20 @@ namespace back_end.Modules.reservas.Controllers
             try
             {
                 _logger.LogInformation("Obteniendo reserva con ID: {ID}", id);
-                
-                // Convertir string a Guid para el servicio (aunque esto parece inconsistente)
-                if (!Guid.TryParse(id, out Guid guidId))
-                {
-                    // Si no es un Guid válido, usar el string directamente
-                    var reserva = await _reservaService.GetByIdStringAsync(id);
-                    if (reserva == null)
-                        return NotFound(new { message = "Reserva no encontrada" });
+                var reserva = await _reservaService.GetByIdStringAsync(id);
+                if (reserva == null)
+                    return NotFound(new { message = "Reserva no encontrada" });
 
-                    return Ok(reserva);
-                }
-                else
-                {
-                    var reserva = await _reservaService.GetByIdAsync(guidId);
-                    if (reserva == null)
-                        return NotFound(new { message = "Reserva no encontrada" });
-
-                    return Ok(reserva);
-                }
+                return Ok(reserva);
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al obtener reserva con ID: {ID}", id);
                 return StatusCode(500, new { message = "Error interno al obtener la reserva" });
             }
-        }        [HttpPost]
+        }
+
+        [HttpPost]
         public async Task<IActionResult> Create([FromBody] ReservaCreateDTO dto)
         {
             try
@@ -116,24 +104,11 @@ namespace back_end.Modules.reservas.Controllers
             try
             {
                 _logger.LogInformation("Actualizando reserva con ID: {ID}", id);
-                
-                // Convertir string a Guid si es necesario, o usar string directamente
-                if (Guid.TryParse(id, out Guid guidId))
-                {
-                    var reserva = await _reservaService.UpdateAsync(guidId, dto);
-                    if (reserva == null)
-                        return NotFound(new { message = "Reserva no encontrada" });
+                var reserva = await _reservaService.UpdateByStringAsync(id, dto);
+                if (reserva == null)
+                    return NotFound(new { message = "Reserva no encontrada" });
 
-                    return Ok(reserva);
-                }
-                else
-                {
-                    var reserva = await _reservaService.UpdateByStringAsync(id, dto);
-                    if (reserva == null)
-                        return NotFound(new { message = "Reserva no encontrada" });
-
-                    return Ok(reserva);
-                }
+                return Ok(reserva);
             }
             catch (Exception ex)
             {

@@ -3,7 +3,7 @@ using back_end.Modules.servicios.Models;
 
 public partial class Item
 {
-    public Guid Id { get; set; }
+    public string? Id { get; set; }
 
     public string? Nombre { get; set; }
 

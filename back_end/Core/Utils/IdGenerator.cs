@@ -55,6 +55,12 @@ namespace back_end.Core.Utils
                     return "TPO";
                 case "item":
                     return "ITM";
+                case "detalleservicio":
+                    return "DSO";
+                case "items":
+                    return "ITS";
+                case "servicios":
+                    return "SVO";
             }
                 
             // Para otras entidades, mantener la lógica original

@@ -2,8 +2,8 @@ namespace back_end.Modules.servicios.DTOs
 {
     public class DetalleServicioDTO
     {
-        public Guid Id { get; set; }
-        public Guid? InventarioId { get; set; }
+        public string? Id { get; set; }
+        public string? InventarioId { get; set; }
         public double? Cantidad { get; set; }
         public string? NombreItem { get; set; }
         public string? Estado { get; set; }
@@ -14,7 +14,7 @@ namespace back_end.Modules.servicios.DTOs
 
     public class DetalleServicioCreateDTO
     {
-        public Guid InventarioId { get; set; }
+        public string? InventarioId { get; set; }
         public double? Cantidad { get; set; } = 1;
         // El estado está limitado a 10 caracteres en la base de datos
         public string? Estado { get; set; }
@@ -31,7 +31,7 @@ namespace back_end.Modules.servicios.DTOs
     
     public class DetalleServicioDeleteDTO
     {
-        public List<Guid> ItemIds { get; set; } = new List<Guid>();
+        public List<string> ItemIds { get; set; } = new List<string>();
     }
     
     // Mantenemos las clases antiguas para compatibilidad

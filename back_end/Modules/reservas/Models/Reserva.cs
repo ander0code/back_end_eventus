@@ -23,7 +23,7 @@ public partial class Reserva
 
     public string? ClienteId { get; set; }
 
-    public Guid? ServicioId { get; set; }
+    public string? ServicioId { get; set; }
 
     public double? PrecioAdelanto { get; set; }
 

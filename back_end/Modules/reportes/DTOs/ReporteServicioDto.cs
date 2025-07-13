@@ -3,7 +3,7 @@ namespace back_end.Modules.reportes.DTOs;
 // Métricas para servicios
 public class ServiciosMasFrecuentesDto
 {
-    public Guid ServicioId { get; set; }
+    public string? ServicioId { get; set; }
     public string? NombreServicio { get; set; }
     public int CantidadReservas { get; set; }
     public decimal PorcentajeUso { get; set; }
@@ -13,7 +13,7 @@ public class ServiciosMasFrecuentesDto
 
 public class VariacionIngresosMensualesServicioDto
 {
-    public Guid ServicioId { get; set; }
+    public string? ServicioId { get; set; }
     public string? NombreServicio { get; set; }
     public int Año { get; set; }
     public int Mes { get; set; }
@@ -25,7 +25,7 @@ public class VariacionIngresosMensualesServicioDto
 
 public class PromedioItemsPorServicioDto
 {
-    public Guid ServicioId { get; set; }
+    public string? ServicioId { get; set; }
     public string? NombreServicio { get; set; }
     public decimal PromedioItemsUsados { get; set; }
     public int TotalDetalles { get; set; }
@@ -34,7 +34,7 @@ public class PromedioItemsPorServicioDto
 
 public class ServiciosSinReservasDto
 {
-    public Guid ServicioId { get; set; }
+    public string? ServicioId { get; set; }
     public string? NombreServicio { get; set; }
     public string? Descripcion { get; set; }
     public decimal? PrecioBase { get; set; }
@@ -43,7 +43,7 @@ public class ServiciosSinReservasDto
 
 public class ServiciosEventosCanceladosDto
 {
-    public Guid ServicioId { get; set; }
+    public string? ServicioId { get; set; }
     public string? NombreServicio { get; set; }
     public int TotalReservas { get; set; }
     public int ReservasCanceladas { get; set; }

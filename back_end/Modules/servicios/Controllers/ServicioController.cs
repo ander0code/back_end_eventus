@@ -37,7 +37,7 @@ namespace back_end.Modules.servicios.Controllers
         }
         
         [HttpGet("{id:guid}")]
-        public async Task<IActionResult> GetById(Guid id)
+        public async Task<IActionResult> GetById(string id)
         {
             try
             {
@@ -93,7 +93,7 @@ namespace back_end.Modules.servicios.Controllers
         }
         
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ServicioUpdateDTO dto)
+        public async Task<IActionResult> Update(string id, [FromBody] ServicioUpdateDTO dto)
         {
             try
             {
@@ -115,7 +115,7 @@ namespace back_end.Modules.servicios.Controllers
         }
         
         [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<IActionResult> Delete(string id)
         {
             try
             {

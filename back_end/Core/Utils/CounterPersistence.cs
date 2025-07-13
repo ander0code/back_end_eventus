@@ -40,6 +40,15 @@ namespace back_end.Core.Utils
             if (maxTipoPagoId > 0)
                 counters[$"TipoPago_{DateTime.Now.Year}"] = maxTipoPagoId;
 
+                        // AGREGAR ESTAS LÍNEAS
+            var maxServicioId = await GetMaxNumericIdPart(_context.Servicios, "SVO");
+            if (maxServicioId > 0)
+                counters[$"Servicios_{DateTime.Now.Year}"] = maxServicioId;
+
+            var maxDetalleServicioId = await GetMaxNumericIdPart(_context.DetalleServicios, "DSO");
+            if (maxDetalleServicioId > 0)
+                counters[$"DetalleServicio_{DateTime.Now.Year}"] = maxDetalleServicioId;
+
             IdGenerator.LoadCountersFromDatabase(counters);
         }
 

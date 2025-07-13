@@ -63,7 +63,7 @@ namespace back_end.Modules.Item.Controllers
 
         /// Actualizar item por ID
         [HttpPut("{id:guid}")]
-        public async Task<IActionResult> Update(Guid id, [FromBody] ItemUpdateDTO dto)
+        public async Task<IActionResult> Update(string id, [FromBody] ItemUpdateDTO dto)
         {
             try
             {
@@ -85,7 +85,7 @@ namespace back_end.Modules.Item.Controllers
 
         /// Eliminar item por ID
         [HttpDelete("{id:guid}")]
-        public async Task<IActionResult> Delete(Guid id)
+        public async Task<IActionResult> Delete(string id)
         {
             try
             {

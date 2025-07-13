@@ -18,7 +18,7 @@ namespace back_end.Modules.Item.DTOs
 
     public class ItemResponseDTO
     {
-        public Guid Id { get; set; }
+        public string? Id { get; set; }
         public string? Nombre { get; set; }
         public string? Descripcion { get; set; }
         public int? Stock { get; set; }

@@ -15,6 +15,6 @@ namespace back_end.Modules.servicios.DTOs
         public string? Descripcion { get; set; }
         public decimal? PrecioBase { get; set; }
         public List<ServicioItemCreateDTO>? ItemsToAdd { get; set; }
-        public List<Guid>? ItemsToRemove { get; set; }
+        public List<string>? ItemsToRemove { get; set; }
     }
 }

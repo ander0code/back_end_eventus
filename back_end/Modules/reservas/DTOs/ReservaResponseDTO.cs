@@ -15,7 +15,7 @@ namespace back_end.Modules.reservas.DTOs
         public string? TelefonoCliente { get; set; }
         public Guid? TipoEventoId { get; set; }
         public string? TipoEventoNombre { get; set; }
-        public Guid? ServicioId { get; set; }
+        public string? ServicioId { get; set; }
         public string? NombreServicio { get; set; }
         public double? PrecioAdelanto { get; set; }
         public decimal? TotalPagado { get; set; }

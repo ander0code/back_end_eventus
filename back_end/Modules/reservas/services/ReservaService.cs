@@ -16,12 +16,12 @@ namespace back_end.Modules.reservas.Services
 {    public interface IReservaService
     {
         Task<List<ReservaResponseDTO>> GetAllAsync();
-        Task<ReservaResponseDTO?> GetByIdAsync(Guid id);
+        Task<ReservaResponseDTO?> GetByIdAsync(string id);
         Task<ReservaResponseDTO?> GetByIdStringAsync(string id);
         Task<ReservaResponseDTO?> CreateAsync(ReservaCreateDTO dto);
-        Task<ReservaResponseDTO?> UpdateAsync(Guid id, ReservaUpdateDTO dto);
+        Task<ReservaResponseDTO?> UpdateAsync(string id, ReservaUpdateDTO dto);
         Task<ReservaResponseDTO?> UpdateByStringAsync(string id, ReservaUpdateDTO dto);
-        Task<bool> DeleteAsync(Guid id);
+        Task<bool> DeleteAsync(string id);
         Task<bool> DeleteByStringAsync(string id);
     }public class ReservaService : IReservaService
     {
@@ -119,7 +119,7 @@ namespace back_end.Modules.reservas.Services
             return result;
         }
         
-        public async Task<ReservaResponseDTO?> GetByIdAsync(Guid id)
+        public async Task<ReservaResponseDTO?> GetByIdAsync(string id)
         {
             var reserva = await _reservaRepo.GetByIdAsync(id.ToString());
             return reserva == null ? null : await MapToDTOAsync(reserva);
@@ -128,9 +128,9 @@ namespace back_end.Modules.reservas.Services
         public async Task<ReservaResponseDTO?> CreateAsync(ReservaCreateDTO dto)
         {
             // Validar stock del servicio antes de crear la reserva
-            if (dto.ServicioId.HasValue)
+            if (!string.IsNullOrEmpty(dto.ServicioId))
             {
-                var stockValido = await ValidarStockServicioAsync(dto.ServicioId.Value);
+                var stockValido = await ValidarStockServicioAsync(dto.ServicioId);
                 if (!stockValido.esValido)
                 {
                     _logger.LogWarning("No se puede crear la reserva. Stock insuficiente para el servicio {ServicioId}: {Mensaje}", 
@@ -230,9 +230,9 @@ namespace back_end.Modules.reservas.Services
             var creada = await _reservaRepo.CreateAsync(reserva);
 
             // Actualizar stock disponible de los items del servicio
-            if (dto.ServicioId.HasValue)
+            if (!string.IsNullOrEmpty(dto.ServicioId))
             {
-                await ActualizarStockServicioEnUsoAsync(dto.ServicioId.Value);
+                await ActualizarStockServicioEnUsoAsync(dto.ServicioId);
             }
 
             // Crear pago de adelanto automáticamente
@@ -263,7 +263,7 @@ namespace back_end.Modules.reservas.Services
             return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
         }
 
-        private async Task ActualizarStockServicioEnUsoAsync(Guid servicioId)
+        private async Task ActualizarStockServicioEnUsoAsync(string servicioId)
         {
             try
             {
@@ -273,12 +273,12 @@ namespace back_end.Modules.reservas.Services
                     // Recalcular stock para todos los items del servicio
                     foreach (var detalle in servicio.DetalleServicios)
                     {
-                        if (detalle.InventarioId.HasValue)
+                        if (!string.IsNullOrEmpty(detalle.InventarioId))
                         {
                             // Recalcular considerando múltiples usos del servicio
-                            await _itemService.RecalcularStockDisponibleAsync(detalle.InventarioId.Value);
+                            await _itemService.RecalcularStockDisponibleAsync(detalle.InventarioId);
                             
-                            var item = await _itemRepository.GetByIdAsync(detalle.InventarioId.Value);
+                            var item = await _itemRepository.GetByIdAsync(detalle.InventarioId);
                             if (item != null)
                             {
                                 _logger.LogInformation("Stock actualizado después de nueva reserva - Item {ItemNombre}: Stock total: {StockTotal}, Disponible: {Disponible}", 
@@ -294,7 +294,7 @@ namespace back_end.Modules.reservas.Services
             }
         }
 
-        private async Task<(bool esValido, string mensaje)> ValidarStockServicioAsync(Guid servicioId)
+        private async Task<(bool esValido, string mensaje)> ValidarStockServicioAsync(string servicioId)
         {
             try
             {
@@ -313,17 +313,17 @@ namespace back_end.Modules.reservas.Services
 
                 foreach (var detalle in servicio.DetalleServicios)
                 {
-                    if (detalle.InventarioId.HasValue)
+                    if (!string.IsNullOrEmpty(detalle.InventarioId))
                     {
                         // Usar el repositorio para obtener el modelo completo
-                        var item = await _itemRepository.GetByIdAsync(detalle.InventarioId.Value);
+                        var item = await _itemRepository.GetByIdAsync(detalle.InventarioId);
                         if (item != null)
                         {
                             // Recalcular stock disponible considerando múltiples usos del servicio
                             await _itemService.RecalcularStockDisponibleAsync(item.Id);
                             
                             // Recargar el item para obtener el stock actualizado
-                            item = await _itemRepository.GetByIdAsync(detalle.InventarioId.Value);
+                            item = await _itemRepository.GetByIdAsync(detalle.InventarioId);
                             
                             var cantidadRequerida = detalle.Cantidad ?? 0;
                             var stockDisponible = item!.StockDisponible;
@@ -354,9 +354,9 @@ namespace back_end.Modules.reservas.Services
             }
         }
 
-        public async Task<ReservaResponseDTO?> UpdateAsync(Guid id, ReservaUpdateDTO dto)
+        public async Task<ReservaResponseDTO?> UpdateAsync(string id, ReservaUpdateDTO dto)
         {
-            var reserva = await _reservaRepo.GetByIdAsync(id.ToString());
+            var reserva = await _reservaRepo.GetByIdAsync(id);
             if (reserva == null) return null;
 
             if (dto.NombreEvento != null) reserva.NombreEvento = dto.NombreEvento;
@@ -364,7 +364,7 @@ namespace back_end.Modules.reservas.Services
             if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
             if (dto.Estado != null) reserva.Estado = dto.Estado;
             if (dto.PrecioTotal.HasValue) reserva.PrecioTotal = dto.PrecioTotal;
-            if (dto.ServicioId.HasValue) reserva.ServicioId = dto.ServicioId;
+            if (!string.IsNullOrEmpty(dto.ServicioId)) reserva.ServicioId = dto.ServicioId;
             if (dto.PrecioAdelanto.HasValue) reserva.PrecioAdelanto = dto.PrecioAdelanto;
             
             if (!string.IsNullOrEmpty(dto.TipoEventoNombre))
@@ -377,7 +377,7 @@ namespace back_end.Modules.reservas.Services
             return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
         }
 
-        public async Task<bool> DeleteAsync(Guid id)
+        public async Task<bool> DeleteAsync(string id)
         {
             var reserva = await _reservaRepo.GetByIdAsync(id.ToString());
             if (reserva == null) return false;
@@ -401,7 +401,7 @@ namespace back_end.Modules.reservas.Services
             if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
             if (dto.Estado != null) reserva.Estado = dto.Estado;
             if (dto.PrecioTotal.HasValue) reserva.PrecioTotal = dto.PrecioTotal;
-            if (dto.ServicioId.HasValue) reserva.ServicioId = dto.ServicioId;
+            if (!string.IsNullOrEmpty(dto.ServicioId)) reserva.ServicioId = dto.ServicioId;
             if (dto.PrecioAdelanto.HasValue) reserva.PrecioAdelanto = dto.PrecioAdelanto;
             
             if (!string.IsNullOrEmpty(dto.TipoEventoNombre))
@@ -420,9 +420,9 @@ namespace back_end.Modules.reservas.Services
             if (reserva == null) return false;
             
             // Antes de eliminar, recalcular el stock de los items del servicio
-            if (reserva.ServicioId.HasValue)
+            if (!string.IsNullOrEmpty(reserva.ServicioId))
             {
-                var servicio = await _servicioRepo.GetByIdAsync(reserva.ServicioId.Value);
+                var servicio = await _servicioRepo.GetByIdAsync(reserva.ServicioId);
                 if (servicio?.DetalleServicios != null)
                 {
                     // Eliminar la reserva primero
@@ -433,9 +433,9 @@ namespace back_end.Modules.reservas.Services
                         // Después recalcular el stock de todos los items del servicio
                         foreach (var detalle in servicio.DetalleServicios)
                         {
-                            if (detalle.InventarioId.HasValue)
+                            if (!string.IsNullOrEmpty(detalle.InventarioId))
                             {
-                                await _itemService.RecalcularStockDisponibleAsync(detalle.InventarioId.Value);
+                                await _itemService.RecalcularStockDisponibleAsync(detalle.InventarioId);
                             }
                         }
                     }

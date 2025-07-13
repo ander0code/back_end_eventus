@@ -122,7 +122,8 @@ public class ReporteRepository : IReporteRepository
             .Select(i => new ItemsMasUtilizadosDto
             {
                 InventarioId = i.Id,
-                NombreItem = i.Nombre,                TotalCantidadUtilizada = (int)i.DetalleServicios
+                NombreItem = i.Nombre,
+                TotalCantidadUtilizada = (int)i.DetalleServicios
                     .Where(ds => (!fechaInicio.HasValue || ds.Fecha >= fechaInicio) &&
                                 (!fechaFin.HasValue || ds.Fecha <= fechaFin))
                     .Sum(ds => ds.Cantidad ?? 0),
@@ -591,14 +592,14 @@ public class ReporteRepository : IReporteRepository
         return resultado;
     }
 
-    public async Task<IEnumerable<VariacionIngresosMensualesServicioDto>> GetVariacionIngresosMensualesServicioAsync(Guid? servicioId, DateTime? fechaInicio, DateTime? fechaFin)
+    public async Task<IEnumerable<VariacionIngresosMensualesServicioDto>> GetVariacionIngresosMensualesServicioAsync(string? servicioId, DateTime? fechaInicio, DateTime? fechaFin)
     {
         var query = _context.Set<Reserva>()
             .Include(r => r.Servicio)
             .Where(r => r.FechaRegistro.HasValue && r.PrecioTotal.HasValue)
             .AsQueryable();
 
-        if (servicioId.HasValue)
+        if (!string.IsNullOrEmpty(servicioId))
             query = query.Where(r => r.ServicioId == servicioId);
 
         if (fechaInicio.HasValue)
@@ -638,7 +639,7 @@ public class ReporteRepository : IReporteRepository
 
                 resultado.Add(new VariacionIngresosMensualesServicioDto
                 {
-                    ServicioId = mesActual.ServicioId!.Value,
+                    ServicioId = mesActual.ServicioId!,
                     NombreServicio = mesActual.NombreServicio,
                     Año = mesActual.Año,
                     Mes = mesActual.Mes,

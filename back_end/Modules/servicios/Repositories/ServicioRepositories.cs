@@ -9,14 +9,14 @@ namespace back_end.Modules.servicios.Repositories
     {
         Task<List<Servicio>> GetAllAsync();
         Task<List<Servicio>> SearchServiciosAsync(string searchTerm);
-        Task<Servicio?> GetByIdAsync(Guid id);
+        Task<Servicio?> GetByIdAsync(string id);
         
         Task<Servicio?> CreateAsync(Servicio servicio);
         Task<Servicio?> UpdateAsync(Servicio servicio);
         Task<bool> DeleteAsync(Servicio servicio);
         
-        Task<DetalleServicio?> GetDetalleServicioByIdAsync(Guid id);
-        Task<List<DetalleServicio>> GetDetalleServiciosByServicioIdAsync(Guid servicioId);
+        Task<DetalleServicio?> GetDetalleServicioByIdAsync(string id);
+        Task<List<DetalleServicio>> GetDetalleServiciosByServicioIdAsync(string servicioId);
         Task<DetalleServicio?> AddDetalleServicioAsync(DetalleServicio detalle);
         Task<DetalleServicio?> UpdateDetalleServicioAsync(DetalleServicio detalle);
         Task<bool> RemoveDetalleServicioAsync(DetalleServicio detalle);
@@ -47,7 +47,7 @@ namespace back_end.Modules.servicios.Repositories
                 .Where(s => s.Nombre != null && s.Nombre.Contains(searchTerm) || 
                            (s.Descripcion != null && s.Descripcion.Contains(searchTerm)))
                 .ToListAsync();
-        }        public async Task<Servicio?> GetByIdAsync(Guid id)
+        }        public async Task<Servicio?> GetByIdAsync(string id)
         {
             return await _context.Servicios
                 .Include(s => s.DetalleServicios)
@@ -89,7 +89,7 @@ namespace back_end.Modules.servicios.Repositories
             }
         }
 
-        public async Task<DetalleServicio?> GetDetalleServicioByIdAsync(Guid id)
+        public async Task<DetalleServicio?> GetDetalleServicioByIdAsync(string id)
         {
             return await _context.DetalleServicios
                 .Include(ds => ds.Inventario)
@@ -97,7 +97,7 @@ namespace back_end.Modules.servicios.Repositories
                 .FirstOrDefaultAsync(ds => ds.Id == id);
         }
 
-        public async Task<List<DetalleServicio>> GetDetalleServiciosByServicioIdAsync(Guid servicioId)
+        public async Task<List<DetalleServicio>> GetDetalleServiciosByServicioIdAsync(string servicioId)
         {
             return await _context.DetalleServicios
                 .Include(ds => ds.Inventario)
@@ -132,12 +132,12 @@ namespace back_end.Modules.servicios.Repositories
         }
         
         // Implementaciones para mantener compatibilidad con código antiguo
-        public Task<DetalleServicio?> GetServicioItemByIdAsync(Guid id)
+        public Task<DetalleServicio?> GetServicioItemByIdAsync(string id)
         {
             return GetDetalleServicioByIdAsync(id);
         }
 
-        public Task<List<DetalleServicio>> GetServicioItemsByServicioIdAsync(Guid servicioId)
+        public Task<List<DetalleServicio>> GetServicioItemsByServicioIdAsync(string servicioId)
         {
             return GetDetalleServiciosByServicioIdAsync(servicioId);
         }

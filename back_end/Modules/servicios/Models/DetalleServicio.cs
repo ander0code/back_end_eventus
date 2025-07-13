@@ -4,11 +4,11 @@ using back_end.Modules.Item.Models;
 
 public partial class DetalleServicio
 {
-    public Guid Id { get; set; }
+    public string? Id { get; set; }
 
-    public Guid? ServicioId { get; set; }
+    public string? ServicioId { get; set; }
 
-    public Guid? InventarioId { get; set; }
+    public string? InventarioId { get; set; }
 
     public double? Cantidad { get; set; }
 

@@ -12,7 +12,7 @@ namespace back_end.Modules.reservas.DTOs
         public string? CorreoElectronico { get; set; }
         public string? Telefono { get; set; }
         public string? TipoEventoNombre { get; set; }
-        public Guid? ServicioId { get; set; }
+        public string? ServicioId { get; set; }
         public double? PrecioAdelanto { get; set; }
     }
 }
