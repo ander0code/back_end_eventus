@@ -124,14 +124,16 @@ namespace back_end.Modules.Item.Repositories
                 // Contar cuántas reservas activas están usando este servicio
                 var count = await _context.Reservas
                     .Where(r => r.ServicioId == servicioId && 
-                               (r.Estado == null || r.Estado.ToLower() != "cancelada"))
+                               (r.Estado == null || 
+                                (r.Estado.ToLower() != "finalizado" && 
+                                 r.Estado.ToLower() != "cancelada" && 
+                                 r.Estado.ToLower() != "cancelado")))
                     .CountAsync();
                 
                 return count;
             }
             catch
             {
-                // Si hay error, retornar 1 para evitar problemas
                 return 1;
             }
         }

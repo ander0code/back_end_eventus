@@ -110,6 +110,18 @@ namespace back_end.Modules.reservas.Controllers
 
                 return Ok(reserva);
             }
+            catch (InvalidOperationException ex)
+            {
+                _logger.LogWarning("Validación fallida al actualizar reserva: {Message}", ex.Message);
+                
+                // Si el mensaje contiene "Stock insuficiente", devolver 404
+                if (ex.Message.Contains("Stock insuficiente"))
+                {
+                    return NotFound(new { message = ex.Message });
+                }
+                
+                return BadRequest(new { message = ex.Message });
+            }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al actualizar reserva con ID: {ID}", id);

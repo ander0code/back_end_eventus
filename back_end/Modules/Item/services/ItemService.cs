@@ -206,15 +206,15 @@ namespace back_end.Modules.Item.Services
                 var servicioId = servicioGroup.Key;
                 var cantidadPorServicio = servicioGroup.Sum(ds => ds.Cantidad ?? 0);
 
-                // Contar cuántas reservas usan este servicio
-                var reservasUsandoServicio = await _repository.ContarReservasUsandoServicioAsync(servicioId);
+                // Contar cuántas reservas ACTIVAS usan este servicio (excluyendo Finalizadas y Canceladas)
+                var reservasUsandoServicio = await _repository.ContarReservasActivasUsandoServicioAsync(servicioId);
                 
                 // Multiplicar la cantidad por el número de reservas que usan este servicio
                 var cantidadRealPorServicio = cantidadPorServicio * reservasUsandoServicio;
                 
                 cantidadTotalEnUso += cantidadRealPorServicio;
 
-                _logger.LogInformation("Servicio {ServicioId}: Cantidad base: {CantidadBase}, Reservas usando: {Reservas}, Total en uso: {TotalUso}", 
+                _logger.LogInformation("Servicio {ServicioId}: Cantidad base: {CantidadBase}, Reservas activas usando: {Reservas}, Total en uso: {TotalUso}", 
                     servicioId, cantidadPorServicio, reservasUsandoServicio, cantidadRealPorServicio);
             }
 

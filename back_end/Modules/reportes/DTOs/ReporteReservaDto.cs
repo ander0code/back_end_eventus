@@ -44,8 +44,10 @@ public class TasaConversionEstadoDto
     public int ReservasPendientes { get; set; }
     public int ReservasConfirmadas { get; set; }
     public int ReservasCanceladas { get; set; }
+    public int ReservasFinalizadas { get; set; }
     public decimal TasaConversionPendienteConfirmado { get; set; }
     public decimal TasaCancelacion { get; set; }
+    public decimal TasaFinalizacion { get; set; }
 }
 
 public class DistribucionReservasPorClienteDto
