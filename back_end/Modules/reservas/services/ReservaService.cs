@@ -361,6 +361,32 @@ namespace back_end.Modules.reservas.Services
             var reserva = await _reservaRepo.GetByIdAsync(id);
             if (reserva == null) return null;
 
+            var estadoAnterior = reserva.Estado;
+            var servicioIdAnterior = reserva.ServicioId;
+
+            // Si está cambiando de Finalizado/Cancelado a Pendiente/Confirmado, validar stock primero
+            if (!string.IsNullOrEmpty(dto.Estado) && dto.Estado != estadoAnterior)
+            {
+                var estadosLiberadores = new[] { "Finalizado", "Cancelada", "Cancelado" };
+                var estadosQueUsan = new[] { "Pendiente", "Confirmado" };
+                
+                if (!string.IsNullOrEmpty(estadoAnterior) && 
+                    estadosLiberadores.Contains(estadoAnterior, StringComparer.OrdinalIgnoreCase) &&
+                    estadosQueUsan.Contains(dto.Estado, StringComparer.OrdinalIgnoreCase))
+                {
+                    var servicioAValidar = !string.IsNullOrEmpty(dto.ServicioId) ? dto.ServicioId : servicioIdAnterior;
+                    
+                    if (!string.IsNullOrEmpty(servicioAValidar))
+                    {
+                        var stockValido = await ValidarStockServicioAsync(servicioAValidar);
+                        if (!stockValido.esValido)
+                        {
+                            throw new InvalidOperationException($"No se puede cambiar el estado porque {stockValido.mensaje}");
+                        }
+                    }
+                }
+            }
+
             if (dto.NombreEvento != null) reserva.NombreEvento = dto.NombreEvento;
             if (dto.FechaEjecucion.HasValue) reserva.FechaEjecucion = dto.FechaEjecucion;
             if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
@@ -375,6 +401,13 @@ namespace back_end.Modules.reservas.Services
             }
             
             var actualizada = await _reservaRepo.UpdateAsync(reserva);
+
+            // Recalcular stock después de la actualización si cambió el servicio o estado
+            if (!string.IsNullOrEmpty(reserva.ServicioId))
+            {
+                await ActualizarStockServicioEnUsoAsync(reserva.ServicioId);
+            }
+
             var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
             return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
         }
@@ -398,6 +431,32 @@ namespace back_end.Modules.reservas.Services
             var reserva = await _reservaRepo.GetByIdAsync(id);
             if (reserva == null) return null;
 
+            var estadoAnterior = reserva.Estado;
+            var servicioIdAnterior = reserva.ServicioId;
+
+            // Si está cambiando de Finalizado/Cancelado a Pendiente/Confirmado, validar stock primero
+            if (!string.IsNullOrEmpty(dto.Estado) && dto.Estado != estadoAnterior)
+            {
+                var estadosLiberadores = new[] { "Finalizado", "Cancelada", "Cancelado" };
+                var estadosQueUsan = new[] { "Pendiente", "Confirmado" };
+                
+                if (!string.IsNullOrEmpty(estadoAnterior) && 
+                    estadosLiberadores.Contains(estadoAnterior, StringComparer.OrdinalIgnoreCase) &&
+                    estadosQueUsan.Contains(dto.Estado, StringComparer.OrdinalIgnoreCase))
+                {
+                    var servicioAValidar = !string.IsNullOrEmpty(dto.ServicioId) ? dto.ServicioId : servicioIdAnterior;
+                    
+                    if (!string.IsNullOrEmpty(servicioAValidar))
+                    {
+                        var stockValido = await ValidarStockServicioAsync(servicioAValidar);
+                        if (!stockValido.esValido)
+                        {
+                            throw new InvalidOperationException($"No se puede cambiar el estado porque {stockValido.mensaje}");
+                        }
+                    }
+                }
+            }
+
             if (dto.NombreEvento != null) reserva.NombreEvento = dto.NombreEvento;
             if (dto.FechaEjecucion.HasValue) reserva.FechaEjecucion = dto.FechaEjecucion;
             if (dto.Descripcion != null) reserva.Descripcion = dto.Descripcion;
@@ -412,6 +471,13 @@ namespace back_end.Modules.reservas.Services
             }
             
             var actualizada = await _reservaRepo.UpdateAsync(reserva);
+
+            // Recalcular stock después de la actualización si cambió el servicio o estado
+            if (!string.IsNullOrEmpty(reserva.ServicioId))
+            {
+                await ActualizarStockServicioEnUsoAsync(reserva.ServicioId);
+            }
+
             var reservaCompleta = await _reservaRepo.GetByIdAsync(actualizada.Id);
             return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
         }
