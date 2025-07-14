@@ -240,19 +240,13 @@ namespace back_end.Modules.reservas.Services
             {
                 try
                 {
-                    string? nombreServicio = null;
-                        if (!string.IsNullOrEmpty(dto.ServicioId))
-                        {
-                            var servicio = await _servicioRepo.GetByIdAsync(dto.ServicioId);
-                            nombreServicio = servicio?.Nombre;
-                        }
 
                     var pagoAdelantoDto = new PagoCreateDTO
                     {
                         IdReserva = creada.Id,
                         NombreTipoPago = "adelanto",
                         Monto = dto.PrecioAdelanto.Value.ToString(),
-                        NombreReserva = nombreServicio
+                        NombreReserva = creada.NombreEvento
                     };
 
                     var pagoCreado = await _pagosService.CreateAsync(pagoAdelantoDto);
