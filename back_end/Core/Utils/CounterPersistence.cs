@@ -35,6 +35,10 @@ namespace back_end.Core.Utils
             var maxPagoId = await GetMaxNumericIdPart(_context.Pagos, "PGO");
             if (maxPagoId > 0)
                 counters[$"Pago_{DateTime.Now.Year}"] = maxPagoId;
+
+            var maxItemId = await GetMaxNumericIdPart(_context.Items, "ITM");
+            if (maxItemId > 0)
+                counters[$"Item_{DateTime.Now.Year}"] = maxItemId;
             
             var maxTipoPagoId = await GetMaxNumericIdPart(_context.TipoPagos, "TPO");
             if (maxTipoPagoId > 0)
