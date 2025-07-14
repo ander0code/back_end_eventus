@@ -3,7 +3,7 @@ namespace back_end.Modules.reportes.DTOs;
 // Métricas para reservas
 public class ReservasPorMesDto
 {
-    public int Año { get; set; }
+    public int Anio { get; set; }
     public int Mes { get; set; }
     public string NombreMes { get; set; } = null!;
     public int CantidadReservas { get; set; }
