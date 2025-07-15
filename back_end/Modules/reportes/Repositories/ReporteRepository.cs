@@ -71,7 +71,7 @@ public class ReporteRepository : IReporteRepository
                 RazonSocial = c.RazonSocial,
                 PromedioAdelantoPorc = c.Reservas
                     .Where(r => r.PrecioTotal.HasValue && r.PrecioTotal > 0 && r.Pagos.Any())
-                    .Average(r => (r.Pagos.Sum(p => Convert.ToDecimal(p.Monto)) / r.PrecioTotal!.Value) * 100),
+                    .Average(r => Math.Round((r.Pagos.Sum(p => Convert.ToDecimal(p.Monto)) / r.PrecioTotal!.Value) * 100, 2)),
                 CantidadReservas = c.Reservas.Count(r => r.Pagos.Any())
             })
             .ToListAsync();
@@ -103,8 +103,8 @@ public class ReporteRepository : IReporteRepository
         {
             TotalClientes = totalClientes,
             ClientesConMultiplesReservas = clientesConMultiplesReservas,
-            PorcentajeMultiplesReservas = totalClientes > 0 ? (decimal)clientesConMultiplesReservas / totalClientes * 100 : 0,
-            TasaRetencion = totalClientes > 0 ? (decimal)clientesConMultiplesReservas / totalClientes * 100 : 0
+            PorcentajeMultiplesReservas = totalClientes > 0 ? Math.Round((decimal)clientesConMultiplesReservas / totalClientes * 100, 2) : 0,
+            TasaRetencion = totalClientes > 0 ? Math.Round((decimal)clientesConMultiplesReservas / totalClientes * 100, 2) : 0
         };
     }
 
@@ -185,7 +185,7 @@ public class ReporteRepository : IReporteRepository
                 Stock = i.Stock ?? 0,
                 StockDisponible = i.StockDisponible,
                 TasaDisponibilidadPorc = i.Stock.HasValue && i.Stock > 0 ? 
-                    ((decimal)i.StockDisponible / i.Stock.Value) * 100 : 0
+                    Math.Round(((decimal)i.StockDisponible / i.Stock.Value) * 100, 2) : 0
             })
             .ToListAsync();
 
@@ -249,10 +249,10 @@ public class ReporteRepository : IReporteRepository
 
         return new PromediotDiasReservaPagoDto
         {
-            PromedioDias = (decimal)pagosConDias.Average(p => p.DiasEntreFechas),
+            PromedioDias = Math.Round((decimal)pagosConDias.Average(p => p.DiasEntreFechas), 2),
             CantidadReservasConPagos = pagosConDias.Count,
-            DiasMinimo = (decimal)pagosConDias.Min(p => p.DiasEntreFechas),
-            DiasMaximo = (decimal)pagosConDias.Max(p => p.DiasEntreFechas)
+            DiasMinimo = Math.Round((decimal)pagosConDias.Min(p => p.DiasEntreFechas), 2),
+            DiasMaximo = Math.Round((decimal)pagosConDias.Max(p => p.DiasEntreFechas), 2)
         };
     }
 
@@ -261,13 +261,13 @@ public class ReporteRepository : IReporteRepository
         var query = _context.Set<Reserva>()
             .Include(r => r.Cliente)
             .Include(r => r.Pagos)
-            .Where(r => r.PrecioTotal.HasValue && r.PrecioTotal > 0)
+            .Where(r => r.PrecioTotal.HasValue && r.PrecioTotal > 0 && r.FechaEjecucion.HasValue)
             .AsQueryable();
 
         if (fechaInicio.HasValue)
-            query = query.Where(r => r.FechaRegistro >= fechaInicio);
+            query = query.Where(r => r.FechaEjecucion >= DateOnly.FromDateTime(fechaInicio.Value));
         if (fechaFin.HasValue)
-            query = query.Where(r => r.FechaRegistro <= fechaFin);
+            query = query.Where(r => r.FechaEjecucion <= DateOnly.FromDateTime(fechaFin.Value));
 
         var reservasConPagos = await query.ToListAsync();
 
@@ -285,7 +285,7 @@ public class ReporteRepository : IReporteRepository
                 PrecioTotal = x.Reserva.PrecioTotal!.Value,
                 TotalPagado = x.TotalPagado,
                 MontoPendiente = x.Reserva.PrecioTotal!.Value - x.TotalPagado,
-                PorcentajePagado = (x.TotalPagado / x.Reserva.PrecioTotal!.Value) * 100
+                PorcentajePagado = Math.Round((x.TotalPagado / x.Reserva.PrecioTotal!.Value) * 100, 2)
             })
             .ToList();
 
@@ -313,7 +313,7 @@ public class ReporteRepository : IReporteRepository
                 TipoPago = g.Key,
                 CantidadUsos = g.Count(),
                 MontoTotal = g.Sum(p => Convert.ToDecimal(p.Monto)),
-                PorcentajeUso = totalPagos > 0 ? ((decimal)g.Count() / totalPagos) * 100 : 0
+                PorcentajeUso = totalPagos > 0 ? Math.Round(((decimal)g.Count() / totalPagos) * 100, 2) : 0
             })
             .OrderByDescending(x => x.PorcentajeUso)
             .ToList();
@@ -374,7 +374,8 @@ public class ReporteRepository : IReporteRepository
                 NombreMes = new DateTime(g.Key.Anio, g.Key.Mes, 1).ToString("MMMM"),
                 CantidadReservas = g.Count(r => r.Estado != "Cancelado" && r.Estado != "Cancelada"),
                 MontoTotal = g.Where(r => r.Estado != "Cancelado" && r.Estado != "Cancelada").Sum(r => r.PrecioTotal ?? 0),
-                MontoPromedio = g.Where(r => r.Estado != "Cancelado" && r.Estado != "Cancelada").Average(r => r.PrecioTotal ?? 0)
+                MontoPromedio = g.Where(r => r.Estado != "Cancelado" && r.Estado != "Cancelada").Any() ? 
+                               g.Where(r => r.Estado != "Cancelado" && r.Estado != "Cancelada").Average(r => r.PrecioTotal ?? 0) : 0
             })
             .OrderBy(x => x.Anio).ThenBy(x => x.Mes)
             .ToListAsync();
@@ -384,26 +385,30 @@ public class ReporteRepository : IReporteRepository
 
     public async Task<IEnumerable<IngresosPromedioPorTipoEventoDto>> GetIngresosPromedioPorTipoEventoAsync(DateTime? fechaInicio, DateTime? fechaFin)
     {
-        var query = _context.Set<Reserva>()
-            .Include(r => r.TiposEventoNavigation)
-            .Where(r => r.PrecioTotal.HasValue && r.Estado != "Cancelado" && r.Estado != "Cancelada")
+        var query = _context.Set<Pago>()
+            .Include(p => p.IdReservaNavigation)
+            .ThenInclude(r => r!.TiposEventoNavigation)
+            .Where(p => p.IdReservaNavigation != null && 
+                       p.IdReservaNavigation.TiposEventoNavigation != null &&
+                       p.IdReservaNavigation.Estado != "Cancelado" && 
+                       p.IdReservaNavigation.Estado != "Cancelada")
             .AsQueryable();
 
         if (fechaInicio.HasValue)
-            query = query.Where(r => r.FechaRegistro >= fechaInicio);
+            query = query.Where(p => p.FechaPago >= fechaInicio);
         if (fechaFin.HasValue)
-            query = query.Where(r => r.FechaRegistro <= fechaFin);
+            query = query.Where(p => p.FechaPago <= fechaFin);
 
         var resultado = await query
-            .GroupBy(r => r.TiposEventoNavigation!.Nombre)
+            .GroupBy(p => p.IdReservaNavigation!.TiposEventoNavigation!.Nombre)
             .Select(g => new IngresosPromedioPorTipoEventoDto
             {
                 TipoEvento = g.Key,
-                IngresoPromedio = g.Average(r => r.PrecioTotal!.Value),
-                CantidadReservas = g.Count(),
-                IngresoTotal = g.Sum(r => r.PrecioTotal!.Value),
-                IngresoMinimo = g.Min(r => r.PrecioTotal!.Value),
-                IngresoMaximo = g.Max(r => r.PrecioTotal!.Value)
+                IngresoPromedio = g.Average(p => Convert.ToDecimal(p.Monto)),
+                CantidadReservas = g.Select(p => p.IdReserva).Distinct().Count(),
+                IngresoTotal = g.Sum(p => Convert.ToDecimal(p.Monto)),
+                IngresoMinimo = g.Min(p => Convert.ToDecimal(p.Monto)),
+                IngresoMaximo = g.Max(p => Convert.ToDecimal(p.Monto))
             })
             .OrderByDescending(x => x.IngresoPromedio)
             .ToListAsync();
@@ -416,13 +421,13 @@ public class ReporteRepository : IReporteRepository
         var query = _context.Set<Reserva>()
             .Include(r => r.Cliente)
             .Include(r => r.Pagos)
-            .Where(r => r.PrecioTotal.HasValue && r.PrecioTotal > 0 && r.Pagos.Any())
+            .Where(r => r.PrecioTotal.HasValue && r.PrecioTotal > 0 && r.Pagos.Any() && r.FechaEjecucion.HasValue)
             .AsQueryable();
 
         if (fechaInicio.HasValue)
-            query = query.Where(r => r.FechaRegistro >= fechaInicio);
+            query = query.Where(r => r.FechaEjecucion >= DateOnly.FromDateTime(fechaInicio.Value));
         if (fechaFin.HasValue)
-            query = query.Where(r => r.FechaRegistro <= fechaFin);
+            query = query.Where(r => r.FechaEjecucion <= DateOnly.FromDateTime(fechaFin.Value));
 
         var reservas = await query.ToListAsync();
 
@@ -430,7 +435,7 @@ public class ReporteRepository : IReporteRepository
             .Select(r => new {
                 Reserva = r,
                 MontoAdelanto = r.Pagos.Sum(p => Convert.ToDecimal(p.Monto)),
-                PorcentajeAdelanto = (r.Pagos.Sum(p => Convert.ToDecimal(p.Monto)) / r.PrecioTotal!.Value) * 100
+                PorcentajeAdelanto = Math.Round((r.Pagos.Sum(p => Convert.ToDecimal(p.Monto)) / r.PrecioTotal!.Value) * 100, 2)
             })
             .Where(x => x.PorcentajeAdelanto >= porcentajeMinimo)
             .Select(x => new ReservasAdelantoAltoDto
@@ -440,7 +445,7 @@ public class ReporteRepository : IReporteRepository
                 ClienteRazonSocial = x.Reserva.Cliente?.RazonSocial,
                 PrecioTotal = x.Reserva.PrecioTotal!.Value,
                 MontoAdelanto = x.MontoAdelanto,
-                PorcentajeAdelanto = x.PorcentajeAdelanto
+                PorcentajeAdelanto = Math.Round(x.PorcentajeAdelanto, 2)
             })
             .OrderByDescending(x => x.PorcentajeAdelanto)
             .ToList();
@@ -455,9 +460,9 @@ public class ReporteRepository : IReporteRepository
             .AsQueryable();
 
         if (fechaInicio.HasValue)
-            query = query.Where(r => r.FechaRegistro >= fechaInicio);
+            query = query.Where(r => r.FechaEjecucion >= DateOnly.FromDateTime(fechaInicio.Value));
         if (fechaFin.HasValue)
-            query = query.Where(r => r.FechaRegistro <= fechaFin);
+            query = query.Where(r => r.FechaEjecucion <= DateOnly.FromDateTime(fechaFin.Value));
 
         var reservas = await query
             .Select(r => new {
@@ -487,12 +492,18 @@ public class ReporteRepository : IReporteRepository
 
     public async Task<TasaConversionEstadoDto> GetTasaConversionEstadoAsync(DateTime? fechaInicio, DateTime? fechaFin)
     {
-        var query = _context.Set<Reserva>().AsQueryable();
+        var query = _context.Set<Reserva>()
+            .AsQueryable();
 
-        if (fechaInicio.HasValue)
-            query = query.Where(r => r.FechaRegistro >= fechaInicio);
-        if (fechaFin.HasValue)
-            query = query.Where(r => r.FechaRegistro <= fechaFin);
+        if (fechaInicio.HasValue || fechaFin.HasValue)
+        {
+            query = query.Where(r => r.FechaRegistro.HasValue);
+            
+            if (fechaInicio.HasValue)
+                query = query.Where(r => r.FechaRegistro >= fechaInicio);
+            if (fechaFin.HasValue)
+                query = query.Where(r => r.FechaRegistro <= fechaFin);
+        }
 
         var reservas = await query
             .GroupBy(r => r.Estado)
@@ -501,7 +512,7 @@ public class ReporteRepository : IReporteRepository
 
         var pendientes = reservas.FirstOrDefault(r => r.Estado == "Pendiente")?.Cantidad ?? 0;
         var confirmadas = reservas.FirstOrDefault(r => r.Estado == "Confirmado")?.Cantidad ?? 0;
-        var canceladas = reservas.FirstOrDefault(r => r.Estado == "Cancelado" || r.Estado == "Cancelada")?.Cantidad ?? 0;
+        var canceladas = reservas.FirstOrDefault(r => r.Estado == "Cancelado")?.Cantidad ?? 0;
         var finalizadas = reservas.FirstOrDefault(r => r.Estado == "Finalizado")?.Cantidad ?? 0;
 
         var totalReservas = pendientes + confirmadas + canceladas + finalizadas;
@@ -513,9 +524,9 @@ public class ReporteRepository : IReporteRepository
             ReservasConfirmadas = confirmadas,
             ReservasCanceladas = canceladas,
             ReservasFinalizadas = finalizadas,
-            TasaConversionPendienteConfirmado = reservasActivas > 0 ? ((decimal)confirmadas / reservasActivas) * 100 : 0,
-            TasaCancelacion = totalReservas > 0 ? ((decimal)canceladas / totalReservas) * 100 : 0,
-            TasaFinalizacion = totalReservas > 0 ? ((decimal)finalizadas / totalReservas) * 100 : 0
+            TasaConversionPendienteConfirmado = reservasActivas > 0 ? Math.Round(((decimal)confirmadas / reservasActivas) * 100, 2) : 0,
+            TasaCancelacion = totalReservas > 0 ? Math.Round(((decimal)canceladas / totalReservas) * 100, 2) : 0,
+            TasaFinalizacion = totalReservas > 0 ? Math.Round(((decimal)finalizadas / totalReservas) * 100, 2) : 0
         };
     }
 
@@ -531,27 +542,32 @@ public class ReporteRepository : IReporteRepository
 
         var resultado = clientes
             .Where(c => c.Reservas.Any(r => 
-                (!fechaInicio.HasValue || r.FechaRegistro >= fechaInicio) &&
-                (!fechaFin.HasValue || r.FechaRegistro <= fechaFin)))
+                r.FechaEjecucion.HasValue &&
+                (!fechaInicio.HasValue || r.FechaEjecucion >= DateOnly.FromDateTime(fechaInicio.Value)) &&
+                (!fechaFin.HasValue || r.FechaEjecucion <= DateOnly.FromDateTime(fechaFin.Value))))
             .Select(c => new DistribucionReservasPorClienteDto
             {
                 ClienteId = c.Id,
                 RazonSocial = c.RazonSocial,
                 TotalReservas = c.Reservas.Count(r => 
-                    (!fechaInicio.HasValue || r.FechaRegistro >= fechaInicio) &&
-                    (!fechaFin.HasValue || r.FechaRegistro <= fechaFin)),
+                    r.FechaEjecucion.HasValue &&
+                    (!fechaInicio.HasValue || r.FechaEjecucion >= DateOnly.FromDateTime(fechaInicio.Value)) &&
+                    (!fechaFin.HasValue || r.FechaEjecucion <= DateOnly.FromDateTime(fechaFin.Value))),
                 ReservasUltimosTresMeses = c.Reservas.Count(r => 
-                    r.FechaRegistro >= fechaTresMesesAtras &&
-                    (!fechaFin.HasValue || r.FechaRegistro <= fechaFin)),
+                    r.FechaEjecucion.HasValue &&
+                    r.FechaEjecucion >= DateOnly.FromDateTime(fechaTresMesesAtras) &&
+                    (!fechaFin.HasValue || r.FechaEjecucion <= DateOnly.FromDateTime(fechaFin.Value))),
                 MontoTotalReservas = c.Reservas
-                    .Where(r => (!fechaInicio.HasValue || r.FechaRegistro >= fechaInicio) &&
-                              (!fechaFin.HasValue || r.FechaRegistro <= fechaFin))
+                    .Where(r => r.FechaEjecucion.HasValue &&
+                              (!fechaInicio.HasValue || r.FechaEjecucion >= DateOnly.FromDateTime(fechaInicio.Value)) &&
+                              (!fechaFin.HasValue || r.FechaEjecucion <= DateOnly.FromDateTime(fechaFin.Value)))
                     .Sum(r => r.PrecioTotal ?? 0),
                 UltimaReserva = c.Reservas
-                    .Where(r => (!fechaInicio.HasValue || r.FechaRegistro >= fechaInicio) &&
-                              (!fechaFin.HasValue || r.FechaRegistro <= fechaFin))
-                    .OrderByDescending(r => r.FechaRegistro)
-                    .FirstOrDefault()?.FechaRegistro
+                    .Where(r => r.FechaEjecucion.HasValue &&
+                              (!fechaInicio.HasValue || r.FechaEjecucion >= DateOnly.FromDateTime(fechaInicio.Value)) &&
+                              (!fechaFin.HasValue || r.FechaEjecucion <= DateOnly.FromDateTime(fechaFin.Value)))
+                    .OrderByDescending(r => r.FechaEjecucion)
+                    .FirstOrDefault()?.FechaEjecucion?.ToDateTime(TimeOnly.MinValue)
             })
             .OrderByDescending(x => x.TotalReservas)
             .ToList();
@@ -562,6 +578,7 @@ public class ReporteRepository : IReporteRepository
     // Implementación de nuevas métricas - SERVICIOS
     public async Task<IEnumerable<ServiciosMasFrecuentesDto>> GetServiciosMasFrecuentesAsync(DateTime? fechaInicio, DateTime? fechaFin, int top = 10)
     {
+        // Primero obtenemos las reservas con sus servicios
         var query = _context.Set<Servicio>()
             .Include(s => s.Reservas)
             .AsQueryable();
@@ -573,6 +590,35 @@ public class ReporteRepository : IReporteRepository
             (!fechaFin.HasValue || r.FechaRegistro <= fechaFin) &&
             r.Estado != "Cancelado" && r.Estado != "Cancelada"));
 
+        // Obtenemos los pagos por servicio
+        var pagosQuery = _context.Set<Pago>()
+            .Include(p => p.IdReservaNavigation)
+            .ThenInclude(r => r!.Servicio)
+            .Where(p => p.IdReservaNavigation != null && 
+                       p.IdReservaNavigation.Servicio != null &&
+                       p.IdReservaNavigation.Estado != "Cancelado" && 
+                       p.IdReservaNavigation.Estado != "Cancelada")
+            .AsQueryable();
+
+        if (fechaInicio.HasValue)
+            pagosQuery = pagosQuery.Where(p => p.FechaPago >= fechaInicio);
+        if (fechaFin.HasValue)
+            pagosQuery = pagosQuery.Where(p => p.FechaPago <= fechaFin);
+
+        var pagosPorServicio = await pagosQuery
+            .GroupBy(p => new { 
+                ServicioId = p.IdReservaNavigation!.ServicioId,
+                NombreServicio = p.IdReservaNavigation.Servicio!.Nombre
+            })
+            .Select(g => new {
+                ServicioId = g.Key.ServicioId,
+                NombreServicio = g.Key.NombreServicio,
+                IngresoTotal = g.Sum(p => Convert.ToDecimal(p.Monto)),
+                IngresoPromedio = g.Average(p => Convert.ToDecimal(p.Monto)),
+                CantidadReservasConPagos = g.Select(p => p.IdReserva).Distinct().Count()
+            })
+            .ToListAsync();
+
         var resultado = servicios
             .Select(s => new {
                 Servicio = s,
@@ -582,14 +628,17 @@ public class ReporteRepository : IReporteRepository
                     r.Estado != "Cancelado" && r.Estado != "Cancelada").ToList()
             })
             .Where(x => x.ReservasFiltradas.Any())
-            .Select(x => new ServiciosMasFrecuentesDto
-            {
-                ServicioId = x.Servicio.Id,
-                NombreServicio = x.Servicio.Nombre,
-                CantidadReservas = x.ReservasFiltradas.Count,
-                PorcentajeUso = totalReservas > 0 ? ((decimal)x.ReservasFiltradas.Count / totalReservas) * 100 : 0,
-                IngresoTotal = x.ReservasFiltradas.Sum(r => r.PrecioTotal ?? 0),
-                IngresoPromedio = x.ReservasFiltradas.Any() ? x.ReservasFiltradas.Average(r => r.PrecioTotal ?? 0) : 0
+            .Select(x => {
+                var pagoInfo = pagosPorServicio.FirstOrDefault(p => p.ServicioId == x.Servicio.Id);
+                return new ServiciosMasFrecuentesDto
+                {
+                    ServicioId = x.Servicio.Id,
+                    NombreServicio = x.Servicio.Nombre,
+                    CantidadReservas = x.ReservasFiltradas.Count,
+                    PorcentajeUso = totalReservas > 0 ? Math.Round(((decimal)x.ReservasFiltradas.Count / totalReservas) * 100, 2) : 0,
+                    IngresoTotal = pagoInfo?.IngresoTotal ?? 0,
+                    IngresoPromedio = pagoInfo?.IngresoPromedio ?? 0
+                };
             })
             .OrderByDescending(x => x.CantidadReservas)
             .Take(top)
@@ -602,23 +651,23 @@ public class ReporteRepository : IReporteRepository
     {
         var query = _context.Set<Reserva>()
             .Include(r => r.Servicio)
-            .Where(r => r.FechaRegistro.HasValue && r.PrecioTotal.HasValue)
+            .Where(r => r.FechaEjecucion.HasValue && r.PrecioTotal.HasValue)
             .AsQueryable();
 
         if (!string.IsNullOrEmpty(servicioId))
             query = query.Where(r => r.ServicioId == servicioId);
 
         if (fechaInicio.HasValue)
-            query = query.Where(r => r.FechaRegistro >= fechaInicio);
+            query = query.Where(r => r.FechaEjecucion >= DateOnly.FromDateTime(fechaInicio.Value));
         if (fechaFin.HasValue)
-            query = query.Where(r => r.FechaRegistro <= fechaFin);
+            query = query.Where(r => r.FechaEjecucion <= DateOnly.FromDateTime(fechaFin.Value));
 
         var reservasPorMes = await query
             .GroupBy(r => new { 
                 r.ServicioId, 
                 r.Servicio!.Nombre,
-                Anio = r.FechaRegistro!.Value.Year, 
-                Mes = r.FechaRegistro!.Value.Month 
+                Anio = r.FechaEjecucion!.Value.Year, 
+                Mes = r.FechaEjecucion!.Value.Month 
             })
             .Select(g => new {
                 ServicioId = g.Key.ServicioId,
@@ -652,7 +701,7 @@ public class ReporteRepository : IReporteRepository
                     NombreMes = new DateTime(mesActual.Anio, mesActual.Mes, 1).ToString("MMMM"),
                     MontoMensual = mesActual.MontoMensual,
                     CantidadReservas = mesActual.CantidadReservas,
-                    VariacionPorc = variacion
+                    VariacionPorc = Math.Round(variacion, 2)
                 });
             }
         }
@@ -687,7 +736,7 @@ public class ReporteRepository : IReporteRepository
                 ServicioId = x.Servicio.Id,
                 NombreServicio = x.Servicio.Nombre,
                 PromedioItemsUsados = x.DetallesFiltrados.Any() ? 
-                    (decimal)x.DetallesFiltrados.Average(ds => ds.Cantidad ?? 0) : 0,
+                    Math.Round((decimal)x.DetallesFiltrados.Average(ds => ds.Cantidad ?? 0), 2) : 0,
                 TotalDetalles = x.DetallesFiltrados.Count,
                 CantidadReservas = x.ReservasFiltradas
             })
@@ -716,10 +765,7 @@ public class ReporteRepository : IReporteRepository
                 ServicioId = s.Id,
                 NombreServicio = s.Nombre,
                 Descripcion = s.Descripcion,
-                PrecioBase = s.PrecioBase,
-                DiasInactivo = s.Reservas.Any() ? 
-                    (int)(DateTime.Now - s.Reservas.Max(r => r.FechaRegistro ?? DateTime.MinValue)).TotalDays :
-                    (int)(DateTime.Now - DateTime.MinValue).TotalDays
+                PrecioBase = s.PrecioBase
             })
             .ToList();
 
@@ -760,7 +806,7 @@ public class ReporteRepository : IReporteRepository
                 NombreServicio = x.NombreServicio,
                 TotalReservas = x.TotalReservas,
                 ReservasCanceladas = x.ReservasCanceladas,
-                PorcentajeCancelacion = ((decimal)x.ReservasCanceladas / x.TotalReservas) * 100,
+                PorcentajeCancelacion = Math.Round(((decimal)x.ReservasCanceladas / x.TotalReservas) * 100, 2),
                 MontoPerdidasCancelacion = x.MontoPerdidasCancelacion
             })
             .OrderByDescending(x => x.PorcentajeCancelacion)
@@ -774,8 +820,8 @@ public class ReporteRepository : IReporteRepository
     {
         var fechaInicioEfectiva = fechaInicio ?? DateTime.Now.AddMonths(-12);
         var fechaFinEfectiva = fechaFin ?? DateTime.Now;
-        var inicioMesAnterior = DateTime.Now.AddMonths(-1).Date;
-        var finMesAnterior = DateTime.Now.Date.AddDays(-1);
+        var inicioMesAnterior = DateTime.Now.AddDays(-30).Date;
+        var finMesAnterior = DateTime.Now.Date;
 
         // Métricas de clientes
         var totalClientes = await _context.Set<Cliente>().CountAsync();
@@ -793,22 +839,24 @@ public class ReporteRepository : IReporteRepository
         var reservasUltimoMes = await _context.Set<Reserva>()
             .CountAsync(r => r.FechaRegistro >= inicioMesAnterior && r.FechaRegistro <= finMesAnterior);
 
-        var ingresosTotales = await _context.Set<Reserva>()
-            .Where(r => r.FechaRegistro >= fechaInicioEfectiva && r.FechaRegistro <= fechaFinEfectiva && 
-                       r.PrecioTotal.HasValue && r.Estado != "Cancelado" && r.Estado != "Cancelada")
-            .SumAsync(r => r.PrecioTotal!.Value);
+        var totalIngresos = await _context.Set<Pago>()
+            .Where(p => p.FechaPago >= fechaInicioEfectiva && 
+                       p.FechaPago <= fechaFinEfectiva)
+            .SumAsync(p => Convert.ToDecimal(p.Monto));
 
-        var ingresosUltimoMes = await _context.Set<Reserva>()
-            .Where(r => r.FechaRegistro >= inicioMesAnterior && r.FechaRegistro <= finMesAnterior && 
-                       r.PrecioTotal.HasValue && r.Estado != "Cancelado" && r.Estado != "Cancelada")
-            .SumAsync(r => r.PrecioTotal!.Value);
+        var totalIngresosUltimoMes = await _context.Set<Pago>()
+            .Where(p => p.FechaPago >= inicioMesAnterior && 
+                       p.FechaPago <= finMesAnterior)
+            .SumAsync(p => Convert.ToDecimal(p.Monto));
 
         var tasaConversion = await GetTasaConversionEstadoAsync(fechaInicioEfectiva, fechaFinEfectiva);
 
         // Métricas de pagos
         var reservasConPagos = await _context.Set<Reserva>()
             .Include(r => r.Pagos)
-            .Where(r => r.FechaRegistro >= fechaInicioEfectiva && r.FechaRegistro <= fechaFinEfectiva && r.PrecioTotal.HasValue)
+            .Where(r => r.FechaRegistro >= fechaInicioEfectiva && 
+                       r.FechaRegistro <= fechaFinEfectiva && 
+                       r.PrecioTotal.HasValue)
             .ToListAsync();
 
         var montoPromedioReserva = reservasConPagos.Any() ? reservasConPagos.Average(r => r.PrecioTotal!.Value) : 0;
@@ -816,7 +864,7 @@ public class ReporteRepository : IReporteRepository
         var reservasConPagosCompletos = reservasConPagos.Count(r => 
             r.Pagos.Sum(p => Convert.ToDecimal(p.Monto)) >= r.PrecioTotal!.Value);
         var porcentajePagosCompletos = reservasConPagos.Any() ? 
-            ((decimal)reservasConPagosCompletos / reservasConPagos.Count) * 100 : 0;
+            Math.Round(((decimal)reservasConPagosCompletos / reservasConPagos.Count) * 100, 2) : 0;
 
         var promedioDiasPago = await GetPromedioDiasReservaPagoAsync(fechaInicioEfectiva, fechaFinEfectiva);
 
@@ -842,7 +890,7 @@ public class ReporteRepository : IReporteRepository
             .ToListAsync();
 
         var tasaDisponibilidadPromedio = itemsConStock.Any() ? 
-            itemsConStock.Average(i => ((decimal)i.StockDisponible / i.Stock) * 100) : 0;
+            Math.Round(itemsConStock.Average(i => ((decimal)i.StockDisponible / i.Stock) * 100), 2) : 0;
 
         var itemMasUtilizado = await _context.Set<back_end.Modules.Item.Models.Item>()
             .Include(i => i.DetalleServicios)
@@ -858,19 +906,19 @@ public class ReporteRepository : IReporteRepository
             // Métricas de clientes
             TotalClientes = totalClientes,
             ClientesNuevosUltimoMes = clientesNuevosUltimoMes,
-            TasaRetencionClientes = tasaRetencion.TasaRetencion,
+            TasaRetencionClientes = Math.Round(tasaRetencion.TasaRetencion, 2),
 
             // Métricas de reservas
             TotalReservas = totalReservas,
             ReservasUltimoMes = reservasUltimoMes,
-            IngresosTotales = ingresosTotales,
-            IngresosUltimoMes = ingresosUltimoMes,
-            TasaConversionReservas = tasaConversion.TasaConversionPendienteConfirmado,
+            IngresosTotales = totalIngresos,
+            IngresosUltimoMes = totalIngresosUltimoMes,
+            TasaConversionReservas = Math.Round(tasaConversion.TasaConversionPendienteConfirmado, 2),
 
             // Métricas de pagos
             MontoPromedioReserva = montoPromedioReserva,
             PorcentajePagosCompletos = porcentajePagosCompletos,
-            PromedioDiasPago = promedioDiasPago.PromedioDias,
+            PromedioDiasPago = Math.Round(promedioDiasPago.PromedioDias, 2),
 
             // Métricas de servicios
             TotalServicios = totalServicios,
