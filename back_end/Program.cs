@@ -99,7 +99,12 @@ builder.Services.AddScoped<back_end.Modules.pagos.Services.ITipoPagoService, bac
 builder.Services.AddScoped<IDashboardService, DashboardService>();
 
 // Reportes Module
-builder.Services.AddScoped<IReporteRepository, ReporteRepository>();
+builder.Services.AddScoped<IClientesReporteRepository, ClientesReporteRepository>();
+builder.Services.AddScoped<IInventarioReporteRepository, InventarioReporteRepository>();
+builder.Services.AddScoped<IPagosReporteRepository, PagosReporteRepository>();
+builder.Services.AddScoped<IReservasReporteRepository, ReservasReporteRepository>();
+builder.Services.AddScoped<IServiciosReporteRepository, ServiciosReporteRepository>();
+builder.Services.AddScoped<IResumenEjecutivoRepository, ResumenEjecutivoRepository>();
 builder.Services.AddScoped<IReporteService, ReporteService>();
 
 var app = builder.Build();

@@ -15,7 +15,7 @@ public class VariacionIngresosMensualesServicioDto
 {
     public string? ServicioId { get; set; }
     public string? NombreServicio { get; set; }
-    public int Año { get; set; }
+    public int Anio { get; set; }
     public int Mes { get; set; }
     public string NombreMes { get; set; } = null!;
     public decimal MontoMensual { get; set; }
@@ -38,7 +38,6 @@ public class ServiciosSinReservasDto
     public string? NombreServicio { get; set; }
     public string? Descripcion { get; set; }
     public decimal? PrecioBase { get; set; }
-    public int DiasInactivo { get; set; }
 }
 
 public class ServiciosEventosCanceladosDto

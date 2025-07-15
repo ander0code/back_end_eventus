@@ -38,7 +38,7 @@ public class TasaUsoMetodoPagoDto
 
 public class TendenciaMensualIngresosDto
 {
-    public int Año { get; set; }
+    public int Anio { get; set; }
     public int Mes { get; set; }
     public string NombreMes { get; set; } = null!;
     public decimal MontoTotal { get; set; }
