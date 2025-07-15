@@ -94,7 +94,7 @@ namespace back_end.Modules.Item.Controllers
                 var resultado = await _service.DeleteAsync(id);
                 
                 if (!resultado)
-                    return NotFound(new { message = "Item no encontrado" });
+                    return BadRequest(new { message = "No se puede eliminar el item porque está relacionado con uno o más servicios." });
                 
                 return Ok(new { message = "Item eliminado correctamente" });
             }

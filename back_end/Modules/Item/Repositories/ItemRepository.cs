@@ -69,8 +69,25 @@ namespace back_end.Modules.Item.Repositories
 
         public async Task<bool> DeleteAsync(Models.Item item)
         {
+            // Verificar si el item está relacionado con algún DetalleServicio
+            var tieneRelacion = await _context.DetalleServicios.AnyAsync(ds => ds.InventarioId == item.Id);
+            if (tieneRelacion)
+            {
+                // No permitir la eliminación si está relacionado
+                return false;
+            }
+
             _context.Items.Remove(item);
-            return await _context.SaveChangesAsync() > 0;
+            try
+            {
+                return await _context.SaveChangesAsync() > 0;
+            }
+            catch (DbUpdateException)
+            {
+                // Loguea el error si quieres
+                // _logger.LogError(ex, "Error al eliminar item con ID {Id}", item.Id);
+                return false;
+            }
         }
         public async Task<bool> ActualizarStockAsync(string id, int cantidad)
         {
