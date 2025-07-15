@@ -38,17 +38,17 @@ public class ReporteRepository : IReporteRepository
                        (!fechaInicio.HasValue || c.PrimeraReserva >= fechaInicio) &&
                        (!fechaFin.HasValue || c.PrimeraReserva <= fechaFin))
             .GroupBy(c => new { 
-                Año = c.PrimeraReserva!.Value.Year, 
+                Anio = c.PrimeraReserva!.Value.Year, 
                 Mes = c.PrimeraReserva!.Value.Month 
             })
             .Select(g => new ClientesNuevosPorMesDto
             {
-                Año = g.Key.Año,
+                Anio = g.Key.Anio,
                 Mes = g.Key.Mes,
-                NombreMes = new DateTime(g.Key.Año, g.Key.Mes, 1).ToString("MMMM"),
+                NombreMes = new DateTime(g.Key.Anio, g.Key.Mes, 1).ToString("MMMM"),
                 CantidadClientesNuevos = g.Count()
             })
-            .OrderBy(x => x.Año).ThenBy(x => x.Mes);
+            .OrderBy(x => x.Anio).ThenBy(x => x.Mes);
 
         return clientesFiltrados;
     }
@@ -332,19 +332,19 @@ public class ReporteRepository : IReporteRepository
 
         var resultado = await query
             .GroupBy(p => new { 
-                Año = p.FechaPago.Year, 
+                Anio = p.FechaPago.Year, 
                 Mes = p.FechaPago.Month 
             })
             .Select(g => new TendenciaMensualIngresosDto
             {
-                Año = g.Key.Año,
+                Anio = g.Key.Anio,
                 Mes = g.Key.Mes,
-                NombreMes = new DateTime(g.Key.Año, g.Key.Mes, 1).ToString("MMMM"),
+                NombreMes = new DateTime(g.Key.Anio, g.Key.Mes, 1).ToString("MMMM"),
                 MontoTotal = g.Sum(p => Convert.ToDecimal(p.Monto)),
                 CantidadPagos = g.Count(),
                 MontoPromedio = g.Average(p => Convert.ToDecimal(p.Monto))
             })
-            .OrderBy(x => x.Año).ThenBy(x => x.Mes)
+            .OrderBy(x => x.Anio).ThenBy(x => x.Mes)
             .ToListAsync();
 
         return resultado;
@@ -364,19 +364,19 @@ public class ReporteRepository : IReporteRepository
 
         var resultado = await query
             .GroupBy(r => new { 
-                Año = r.FechaRegistro!.Value.Year, 
+                Anio = r.FechaRegistro!.Value.Year, 
                 Mes = r.FechaRegistro!.Value.Month 
             })
             .Select(g => new ReservasPorMesDto
             {
-                Año = g.Key.Año,
+                Anio = g.Key.Anio,
                 Mes = g.Key.Mes,
-                NombreMes = new DateTime(g.Key.Año, g.Key.Mes, 1).ToString("MMMM"),
-                CantidadReservas = g.Count(),
-                MontoTotal = g.Sum(r => r.PrecioTotal ?? 0),
-                MontoPromedio = g.Average(r => r.PrecioTotal ?? 0)
+                NombreMes = new DateTime(g.Key.Anio, g.Key.Mes, 1).ToString("MMMM"),
+                CantidadReservas = g.Count(r => r.Estado != "Cancelado" && r.Estado != "Cancelada"),
+                MontoTotal = g.Where(r => r.Estado != "Cancelado" && r.Estado != "Cancelada").Sum(r => r.PrecioTotal ?? 0),
+                MontoPromedio = g.Where(r => r.Estado != "Cancelado" && r.Estado != "Cancelada").Average(r => r.PrecioTotal ?? 0)
             })
-            .OrderBy(x => x.Año).ThenBy(x => x.Mes)
+            .OrderBy(x => x.Anio).ThenBy(x => x.Mes)
             .ToListAsync();
 
         return resultado;
@@ -386,7 +386,7 @@ public class ReporteRepository : IReporteRepository
     {
         var query = _context.Set<Reserva>()
             .Include(r => r.TiposEventoNavigation)
-            .Where(r => r.PrecioTotal.HasValue)
+            .Where(r => r.PrecioTotal.HasValue && r.Estado != "Cancelado" && r.Estado != "Cancelada")
             .AsQueryable();
 
         if (fechaInicio.HasValue)
@@ -570,14 +570,16 @@ public class ReporteRepository : IReporteRepository
 
         var totalReservas = servicios.Sum(s => s.Reservas.Count(r => 
             (!fechaInicio.HasValue || r.FechaRegistro >= fechaInicio) &&
-            (!fechaFin.HasValue || r.FechaRegistro <= fechaFin)));
+            (!fechaFin.HasValue || r.FechaRegistro <= fechaFin) &&
+            r.Estado != "Cancelado" && r.Estado != "Cancelada"));
 
         var resultado = servicios
             .Select(s => new {
                 Servicio = s,
                 ReservasFiltradas = s.Reservas.Where(r => 
                     (!fechaInicio.HasValue || r.FechaRegistro >= fechaInicio) &&
-                    (!fechaFin.HasValue || r.FechaRegistro <= fechaFin)).ToList()
+                    (!fechaFin.HasValue || r.FechaRegistro <= fechaFin) &&
+                    r.Estado != "Cancelado" && r.Estado != "Cancelada").ToList()
             })
             .Where(x => x.ReservasFiltradas.Any())
             .Select(x => new ServiciosMasFrecuentesDto
@@ -615,25 +617,25 @@ public class ReporteRepository : IReporteRepository
             .GroupBy(r => new { 
                 r.ServicioId, 
                 r.Servicio!.Nombre,
-                Año = r.FechaRegistro!.Value.Year, 
+                Anio = r.FechaRegistro!.Value.Year, 
                 Mes = r.FechaRegistro!.Value.Month 
             })
             .Select(g => new {
                 ServicioId = g.Key.ServicioId,
                 NombreServicio = g.Key.Nombre,
-                Año = g.Key.Año,
+                Anio = g.Key.Anio,
                 Mes = g.Key.Mes,
                 MontoMensual = g.Sum(r => r.PrecioTotal!.Value),
                 CantidadReservas = g.Count()
             })
-            .OrderBy(x => x.ServicioId).ThenBy(x => x.Año).ThenBy(x => x.Mes)
+            .OrderBy(x => x.ServicioId).ThenBy(x => x.Anio).ThenBy(x => x.Mes)
             .ToListAsync();
 
         var resultado = new List<VariacionIngresosMensualesServicioDto>();
 
         foreach (var grupo in reservasPorMes.GroupBy(x => x.ServicioId))
         {
-            var mesesOrdenados = grupo.OrderBy(x => x.Año).ThenBy(x => x.Mes).ToList();
+            var mesesOrdenados = grupo.OrderBy(x => x.Anio).ThenBy(x => x.Mes).ToList();
             
             for (int i = 0; i < mesesOrdenados.Count; i++)
             {
@@ -645,9 +647,9 @@ public class ReporteRepository : IReporteRepository
                 {
                     ServicioId = mesActual.ServicioId!,
                     NombreServicio = mesActual.NombreServicio,
-                    Año = mesActual.Año,
+                    Anio = mesActual.Anio,
                     Mes = mesActual.Mes,
-                    NombreMes = new DateTime(mesActual.Año, mesActual.Mes, 1).ToString("MMMM"),
+                    NombreMes = new DateTime(mesActual.Anio, mesActual.Mes, 1).ToString("MMMM"),
                     MontoMensual = mesActual.MontoMensual,
                     CantidadReservas = mesActual.CantidadReservas,
                     VariacionPorc = variacion
@@ -792,11 +794,13 @@ public class ReporteRepository : IReporteRepository
             .CountAsync(r => r.FechaRegistro >= inicioMesAnterior && r.FechaRegistro <= finMesAnterior);
 
         var ingresosTotales = await _context.Set<Reserva>()
-            .Where(r => r.FechaRegistro >= fechaInicioEfectiva && r.FechaRegistro <= fechaFinEfectiva && r.PrecioTotal.HasValue)
+            .Where(r => r.FechaRegistro >= fechaInicioEfectiva && r.FechaRegistro <= fechaFinEfectiva && 
+                       r.PrecioTotal.HasValue && r.Estado != "Cancelado" && r.Estado != "Cancelada")
             .SumAsync(r => r.PrecioTotal!.Value);
 
         var ingresosUltimoMes = await _context.Set<Reserva>()
-            .Where(r => r.FechaRegistro >= inicioMesAnterior && r.FechaRegistro <= finMesAnterior && r.PrecioTotal.HasValue)
+            .Where(r => r.FechaRegistro >= inicioMesAnterior && r.FechaRegistro <= finMesAnterior && 
+                       r.PrecioTotal.HasValue && r.Estado != "Cancelado" && r.Estado != "Cancelada")
             .SumAsync(r => r.PrecioTotal!.Value);
 
         var tasaConversion = await GetTasaConversionEstadoAsync(fechaInicioEfectiva, fechaFinEfectiva);
