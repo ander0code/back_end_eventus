@@ -38,7 +38,6 @@ public class ServiciosSinReservasDto
     public string? NombreServicio { get; set; }
     public string? Descripcion { get; set; }
     public decimal? PrecioBase { get; set; }
-    public int DiasInactivo { get; set; }
 }
 
 public class ServiciosEventosCanceladosDto
