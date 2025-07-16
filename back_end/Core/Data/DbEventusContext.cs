@@ -41,10 +41,9 @@ public partial class DbEventusContext : DbContext
 
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
-
         if (!optionsBuilder.IsConfigured)
         {
-
+            optionsBuilder.UseSqlServer("Server=DESKTOP-42672O2;Database=db_eventus2;User Id=sa;Password=Choque145!;TrustServerCertificate=True");
         }
     }
     protected override void OnModelCreating(ModelBuilder modelBuilder)

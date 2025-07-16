@@ -53,11 +53,18 @@ builder.Services.AddCors(options =>
             .AllowAnyHeader());
 });
 
-
-builder.Services.AddDbContext<DbEventusContext>((serviceProvider, options) => {
+// Configuración para usarlo con ngrok
+/*
+builder.Services.AddDbContext<DbEventusContext>((serviceProvider, options) =>
+{
     var appSettings = serviceProvider.GetRequiredService<AppSettings>();
     options.UseSqlServer(appSettings.DatabaseConnection);
 });
+*/
+
+// Configuración para usarlo de manera tradicional
+builder.Services.AddDbContext<DbEventusContext>();
+
 
 // Agregar configuración JWT usando AppSettings
 builder.Services.AddJwtConfiguration(builder.Configuration);
