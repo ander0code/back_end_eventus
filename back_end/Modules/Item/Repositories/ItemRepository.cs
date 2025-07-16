@@ -15,6 +15,11 @@ namespace back_end.Modules.Item.Repositories
         Task<List<Models.Item>> GetByStockBelowMinAsync(int minStock);
         Task<int> ContarReservasUsandoServicioAsync(string servicioId);
         Task<int> ContarReservasActivasUsandoServicioAsync(string servicioId);
+        
+        // Métodos optimizados faltantes
+        Task<List<Models.Item>> GetItemsConStockEnUsoAsync(List<string> itemsIds);
+        Task<bool> UpdateBatchAsync(List<Models.Item> items);
+        Task<(bool esValido, string mensaje, Models.Item? item, int stockDisponibleActual)> ValidarStockParaDetalleAsync(string itemId, int cantidadRequerida);
     }
 
     public class ItemRepository : IItemRepository
@@ -175,6 +180,101 @@ namespace back_end.Modules.Item.Repositories
             catch
             {
                 return 1;
+            }
+        }
+
+        public async Task<List<Models.Item>> GetItemsConStockEnUsoAsync(List<string> itemsIds)
+        {
+            try
+            {
+                // Una sola consulta para obtener todos los items con su stock en uso calculado
+                var items = await _context.Items
+                    .Where(i => itemsIds.Contains(i.Id))
+                    .Include(i => i.DetalleServicios)
+                        .ThenInclude(ds => ds.Servicio)
+                            .ThenInclude(s => s!.Reservas.Where(r => r.Estado == null || 
+                                (r.Estado.ToLower() != "finalizado" && 
+                                 r.Estado.ToLower() != "cancelada" && 
+                                 r.Estado.ToLower() != "cancelado")))
+                    .ToListAsync();
+
+                // Calcular la cantidad en uso para cada item
+                foreach (var item in items)
+                {
+                    var cantidadEnUso = 0.0;
+                    var serviciosUsados = item.DetalleServicios
+                        .Where(ds => !string.IsNullOrEmpty(ds.ServicioId))
+                        .GroupBy(ds => ds.ServicioId!)
+                        .ToList();
+
+                    foreach (var servicioGroup in serviciosUsados)
+                    {
+                        var cantidadPorServicio = servicioGroup.Sum(ds => ds.Cantidad ?? 0);
+                        var reservasActivas = servicioGroup.First().Servicio?.Reservas?.Count() ?? 0;
+                        cantidadEnUso += cantidadPorServicio * reservasActivas;
+                    }
+
+                    // Asignar el valor calculado temporalmente
+                    item.CantidadEnUso = cantidadEnUso;
+                }
+
+                return items;
+            }
+            catch (Exception ex)
+            {
+                return new List<Models.Item>();
+            }
+        }
+
+        public async Task<bool> UpdateBatchAsync(List<Models.Item> items)
+        {
+            try
+            {
+                foreach (var item in items)
+                {
+                    _context.Entry(item).State = EntityState.Modified;
+                }
+                
+                await _context.SaveChangesAsync();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                return false;
+            }
+        }
+
+        public async Task<(bool esValido, string mensaje, Models.Item? item, int stockDisponibleActual)> ValidarStockParaDetalleAsync(string itemId, int cantidadRequerida)
+        {
+            try
+            {
+                var item = await _context.Items
+                    .Include(i => i.DetalleServicios)
+                        .ThenInclude(ds => ds.Servicio)
+                            .ThenInclude(s => s!.Reservas.Where(r => r.Estado == null || 
+                                (r.Estado.ToLower() != "finalizado" && 
+                                 r.Estado.ToLower() != "cancelada" && 
+                                 r.Estado.ToLower() != "cancelado")))
+                    .FirstOrDefaultAsync(i => i.Id == itemId);
+
+                if (item == null)
+                {
+                    return (false, "El item especificado no existe", null, 0);
+                }
+
+                // Calcular stock disponible actual
+                var stockDisponible = item.StockDisponible;
+
+                if (stockDisponible < cantidadRequerida)
+                {
+                    return (false, $"Stock insuficiente. Disponible: {stockDisponible}, Requerido: {cantidadRequerida}", item, stockDisponible);
+                }
+
+                return (true, "Stock suficiente", item, stockDisponible);
+            }
+            catch (Exception ex)
+            {
+                return (false, "Error al validar stock", null, 0);
             }
         }
     }

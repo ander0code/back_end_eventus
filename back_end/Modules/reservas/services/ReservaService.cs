@@ -13,7 +13,8 @@ using back_end.Modules.Item.Services;
 using back_end.Modules.Item.Repositories;
 
 namespace back_end.Modules.reservas.Services
-{    public interface IReservaService
+{    
+    public interface IReservaService
     {
         Task<List<ReservaResponseDTO>> GetAllAsync();
         Task<ReservaResponseDTO?> GetByIdAsync(string id);
@@ -23,7 +24,9 @@ namespace back_end.Modules.reservas.Services
         Task<ReservaResponseDTO?> UpdateByStringAsync(string id, ReservaUpdateDTO dto);
         Task<bool> DeleteAsync(string id);
         Task<bool> DeleteByStringAsync(string id);
-    }public class ReservaService : IReservaService
+    }
+    
+    public class ReservaService : IReservaService
     {
         private readonly IReservaRepository _reservaRepo;
         private readonly IUsuarioRepository _usuarioRepo;
@@ -265,94 +268,40 @@ namespace back_end.Modules.reservas.Services
             return reservaCompleta == null ? null : await MapToDTOAsync(reservaCompleta);
         }
 
-        private async Task ActualizarStockServicioEnUsoAsync(string servicioId)
-        {
-            try
-            {
-                var servicio = await _servicioRepo.GetByIdAsync(servicioId);
-                if (servicio?.DetalleServicios != null)
-                {
-                    // Recalcular stock para todos los items del servicio
-                    foreach (var detalle in servicio.DetalleServicios)
-                    {
-                        if (!string.IsNullOrEmpty(detalle.InventarioId))
-                        {
-                            // Recalcular considerando múltiples usos del servicio
-                            await _itemService.RecalcularStockDisponibleAsync(detalle.InventarioId);
-                            
-                            var item = await _itemRepository.GetByIdAsync(detalle.InventarioId);
-                            if (item != null)
-                            {
-                                _logger.LogInformation("Stock actualizado después de nueva reserva - Item {ItemNombre}: Stock total: {StockTotal}, Disponible: {Disponible}", 
-                                    item.Nombre, item.Stock, item.StockDisponible);
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Error al actualizar stock en uso para servicio {ServicioId}", servicioId);
-            }
-        }
-
         private async Task<(bool esValido, string mensaje)> ValidarStockServicioAsync(string servicioId)
         {
             try
             {
-                var servicio = await _servicioRepo.GetByIdAsync(servicioId);
-                if (servicio == null)
-                {
-                    return (false, "El servicio especificado no existe");
-                }
-
-                if (servicio.DetalleServicios == null || !servicio.DetalleServicios.Any())
-                {
-                    return (true, "Servicio sin items, válido para usar");
-                }
-
-                var itemsInsuficientes = new List<string>();
-
-                foreach (var detalle in servicio.DetalleServicios)
-                {
-                    if (!string.IsNullOrEmpty(detalle.InventarioId))
-                    {
-                        // Usar el repositorio para obtener el modelo completo
-                        var item = await _itemRepository.GetByIdAsync(detalle.InventarioId);
-                        if (item != null && !string.IsNullOrEmpty(item.Id))
-                        {
-                            // Recalcular stock disponible considerando múltiples usos del servicio
-                            await _itemService.RecalcularStockDisponibleAsync(item.Id);
-                            
-                            // Recargar el item para obtener el stock actualizado
-                            item = await _itemRepository.GetByIdAsync(detalle.InventarioId);
-                            
-                            var cantidadRequerida = detalle.Cantidad ?? 0;
-                            var stockDisponible = item!.StockDisponible;
-                            
-                            _logger.LogInformation("Validando stock - Item {ItemNombre}: Stock total: {StockTotal}, Disponible: {Disponible}, Requerido: {Requerido}", 
-                                item.Nombre, item.Stock, stockDisponible, cantidadRequerida);
-
-                            if (stockDisponible < cantidadRequerida)
-                            {
-                                itemsInsuficientes.Add($"'{item.Nombre}' (requerido: {cantidadRequerida}, disponible: {stockDisponible})");
-                            }
-                        }
-                    }
-                }
-
-                if (itemsInsuficientes.Any())
-                {
-                    var mensaje = $"Stock insuficiente para los siguientes items: {string.Join(", ", itemsInsuficientes)}";
-                    return (false, mensaje);
-                }
-
-                return (true, "Stock suficiente para todos los items del servicio");
+                // Usar el método optimizado del repositorio
+                var resultadoValidacion = await _servicioRepo.ValidarStockServicioAsync(servicioId);
+                return resultadoValidacion;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Error al validar stock del servicio {ServicioId}", servicioId);
                 return (false, "Error al validar stock del servicio");
+            }
+        }
+
+        private async Task ActualizarStockServicioEnUsoAsync(string servicioId)
+        {
+            try
+            {
+                // Obtener todos los items del servicio de una vez
+                var itemsIds = await _servicioRepo.GetItemsIdsFromServicioAsync(servicioId);
+                
+                if (itemsIds.Any())
+                {
+                    // Recalcular stock en lote para todos los items del servicio
+                    await _itemService.RecalcularStockDisponibleBatchAsync(itemsIds);
+                    
+                    _logger.LogInformation("Stock actualizado en lote para {Count} items del servicio {ServicioId}", 
+                        itemsIds.Count, servicioId);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al actualizar stock en uso para servicio {ServicioId}", servicioId);
             }
         }
 
@@ -516,3 +465,4 @@ namespace back_end.Modules.reservas.Services
         }
     }
 }
+            

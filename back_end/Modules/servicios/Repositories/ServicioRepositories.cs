@@ -21,6 +21,11 @@ namespace back_end.Modules.servicios.Repositories
         Task<DetalleServicio?> UpdateDetalleServicioAsync(DetalleServicio detalle);
         Task<bool> RemoveDetalleServicioAsync(DetalleServicio detalle);
         Task<bool> RemoveMultipleDetalleServiciosAsync(IEnumerable<DetalleServicio> detalles);
+        
+        // Métodos optimizados
+        Task<(bool esValido, string mensaje)> ValidarStockServicioAsync(string servicioId);
+        Task<List<string>> GetItemsIdsFromServicioAsync(string servicioId);
+        Task<(bool esValido, string mensaje, back_end.Modules.Item.Models.Item? item, int stockDisponibleActual)> ValidarStockParaDetalleAsync(string itemId, double? cantidad);
     }    public class ServicioRepository : IServicioRepository
     {
         private readonly DbEventusContext _context;
@@ -132,6 +137,116 @@ namespace back_end.Modules.servicios.Repositories
             return await _context.SaveChangesAsync() > 0;
         }
         
+        // Métodos optimizados para validación de stock
+        public async Task<(bool esValido, string mensaje)> ValidarStockServicioAsync(string servicioId)
+        {
+            try
+            {
+                // Una sola consulta para obtener toda la información necesaria
+                var servicioInfo = await _context.Servicios
+                    .Where(s => s.Id == servicioId)
+                    .Select(s => new
+                    {
+                        s.Id,
+                        DetalleServicios = s.DetalleServicios.Select(ds => new
+                        {
+                            ds.InventarioId,
+                            ds.Cantidad,
+                            Item = new
+                            {
+                                ds.Inventario!.Id,
+                                ds.Inventario.Nombre,
+                                ds.Inventario.Stock,
+                                ds.Inventario.StockDisponible
+                            }
+                        }).ToList()
+                    })
+                    .FirstOrDefaultAsync();
+
+                if (servicioInfo == null)
+                {
+                    return (false, "El servicio especificado no existe");
+                }
+
+                if (!servicioInfo.DetalleServicios.Any())
+                {
+                    return (true, "Servicio sin items, válido para usar");
+                }
+
+                var itemsInsuficientes = new List<string>();
+
+                foreach (var detalle in servicioInfo.DetalleServicios)
+                {
+                    if (!string.IsNullOrEmpty(detalle.InventarioId))
+                    {
+                        var cantidadRequerida = detalle.Cantidad ?? 0;
+                        var stockDisponible = detalle.Item.StockDisponible;
+                        
+                        if (stockDisponible < cantidadRequerida)
+                        {
+                            itemsInsuficientes.Add($"'{detalle.Item.Nombre}' (requerido: {cantidadRequerida}, disponible: {stockDisponible})");
+                        }
+                    }
+                }
+
+                if (itemsInsuficientes.Any())
+                {
+                    var mensaje = $"Stock insuficiente para los siguientes items: {string.Join(", ", itemsInsuficientes)}";
+                    return (false, mensaje);
+                }
+
+                return (true, "Stock suficiente para todos los items del servicio");
+            }
+            catch (Exception ex)
+            {
+                return (false, "Error al validar stock del servicio");
+            }
+        }
+
+        public async Task<List<string>> GetItemsIdsFromServicioAsync(string servicioId)
+        {
+            try
+            {
+                return await _context.DetalleServicios
+                    .Where(ds => ds.ServicioId == servicioId && !string.IsNullOrEmpty(ds.InventarioId))
+                    .Select(ds => ds.InventarioId!)
+                    .Distinct()
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                return new List<string>();
+            }
+        }
+
+        public async Task<(bool esValido, string mensaje, back_end.Modules.Item.Models.Item? item, int stockDisponibleActual)> ValidarStockParaDetalleAsync(string itemId, double? cantidad)
+        {
+            try
+            {
+                var item = await _context.Items
+                    .FirstOrDefaultAsync(i => i.Id == itemId);
+
+                if (item == null)
+                {
+                    return (false, "El item especificado no existe", null, 0);
+                }
+
+                var stockDisponible = item.StockDisponible;
+                var cantidadRequerida = cantidad ?? 0;
+
+                if (stockDisponible < cantidadRequerida)
+                {
+                    return (false, $"Stock insuficiente. Disponible: {stockDisponible}, Requerido: {cantidadRequerida}", item, stockDisponible);
+                }
+
+                return (true, "Stock suficiente", item, stockDisponible);
+            }
+            catch (Exception ex)
+            {
+                return (false, "Error al validar stock", null, 0);
+            }
+        }
+
         // Implementaciones para mantener compatibilidad con código antiguo
         public Task<DetalleServicio?> GetServicioItemByIdAsync(string id)
         {

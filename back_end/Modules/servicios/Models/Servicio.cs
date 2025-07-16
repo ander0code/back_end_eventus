@@ -16,3 +16,4 @@ public partial class Servicio
 
     public virtual ICollection<Reserva> Reservas { get; set; } = new List<Reserva>();
 }
+ 
