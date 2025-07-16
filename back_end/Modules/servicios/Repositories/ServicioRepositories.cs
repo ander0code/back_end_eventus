@@ -197,7 +197,7 @@ namespace back_end.Modules.servicios.Repositories
 
                 return (true, "Stock suficiente para todos los items del servicio");
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return (false, "Error al validar stock del servicio");
             }
@@ -213,7 +213,7 @@ namespace back_end.Modules.servicios.Repositories
                     .Distinct()
                     .ToListAsync();
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return new List<string>();
             }
@@ -241,41 +241,10 @@ namespace back_end.Modules.servicios.Repositories
 
                 return (true, "Stock suficiente", item, stockDisponible);
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 return (false, "Error al validar stock", null, 0);
             }
-        }
-
-        // Implementaciones para mantener compatibilidad con código antiguo
-        public Task<DetalleServicio?> GetServicioItemByIdAsync(string id)
-        {
-            return GetDetalleServicioByIdAsync(id);
-        }
-
-        public Task<List<DetalleServicio>> GetServicioItemsByServicioIdAsync(string servicioId)
-        {
-            return GetDetalleServiciosByServicioIdAsync(servicioId);
-        }
-
-        public Task<DetalleServicio?> AddServicioItemAsync(DetalleServicio item)
-        {
-            return AddDetalleServicioAsync(item);
-        }
-
-        public Task<DetalleServicio?> UpdateServicioItemAsync(DetalleServicio item)
-        {
-            return UpdateDetalleServicioAsync(item);
-        }
-
-        public Task<bool> RemoveServicioItemAsync(DetalleServicio item)
-        {
-            return RemoveDetalleServicioAsync(item);
-        }
-        
-        public Task<bool> RemoveMultipleServicioItemsAsync(IEnumerable<DetalleServicio> items)
-        {
-            return RemoveMultipleDetalleServiciosAsync(items);
         }
     }
 }

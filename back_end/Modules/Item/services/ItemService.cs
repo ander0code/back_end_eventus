@@ -162,32 +162,12 @@ namespace back_end.Modules.Item.Services
             }
         }
 
-        /// Recalcular stock disponible basado en uso actual
+        /// Recalcular stock disponible basado en uso actual (para un solo item)
         public async Task<bool> RecalcularStockDisponibleAsync(string id)
         {
             try
             {
-                // Obtener el item con todas sus relaciones actualizadas
-                var item = await _repository.GetByIdAsync(id);
-                if (item == null) return false;
-
-                // Calcular cantidad en uso considerando múltiples reservas del mismo servicio
-                var cantidadEnUso = await CalcularCantidadEnUsoRealAsync(item);
-                var stockActual = item.Stock ?? 0;
-                var nuevoStockDisponible = (int)(stockActual - cantidadEnUso);
-
-                // Solo actualizar si el valor cambió
-                if (item.StockDisponible != nuevoStockDisponible)
-                {
-                    item.StockDisponible = nuevoStockDisponible;
-                    await _repository.UpdateAsync(item);
-                    
-                    // Reducimos el nivel de detalle de este log para hacerlo menos verboso
-                    _logger.LogDebug("Stock recalculado para item {ItemNombre}: Total: {StockTotal}, En uso: {EnUso}, Disponible: {Disponible}", 
-                        item.Nombre, stockActual, cantidadEnUso, nuevoStockDisponible);
-                }
-
-                return true;
+                return await RecalcularStockDisponibleBatchAsync(new List<string> { id });
             }
             catch (Exception ex)
             {
@@ -196,6 +176,7 @@ namespace back_end.Modules.Item.Services
             }
         }
 
+        /// Recalcular stock disponible para múltiples items a la vez (más eficiente)
         public async Task<bool> RecalcularStockDisponibleBatchAsync(List<string> itemsIds)
         {
             try
@@ -222,8 +203,9 @@ namespace back_end.Modules.Item.Services
                 {
                     await _repository.UpdateBatchAsync(itemsActualizados);
                     
-                    // Cambiamos este log a nivel Debug para reducir la verbosidad en la consola
-                    _logger.LogDebug("Stock recalculado en lote para {Count} items", itemsActualizados.Count);
+                    // Usar log mínimo solo si hay más de un ítem
+                    if (itemsActualizados.Count > 1)
+                        _logger.LogDebug("Stock recalculado en lote para {Count} items", itemsActualizados.Count);
                 }
 
                 return true;
@@ -296,7 +278,7 @@ namespace back_end.Modules.Item.Services
                         Stock = item.Stock,
                         StockDisponible = stockDisponible,
                         Preciobase = item.Preciobase,
-                        ItemsEnUso = (int)cantidadEnUso // Simplemente la cantidad total en uso
+                        ItemsEnUso = (int)cantidadEnUso 
                     });
                 }
 
@@ -326,7 +308,7 @@ namespace back_end.Modules.Item.Services
                 Stock = item.Stock,
                 StockDisponible = item.StockDisponible,
                 Preciobase = item.Preciobase,
-                ItemsEnUso = enUso >= 0 ? enUso : 0 // Asegurarnos de no devolver valores negativos
+                ItemsEnUso = enUso >= 0 ? enUso : 0
             };
         }
     }
