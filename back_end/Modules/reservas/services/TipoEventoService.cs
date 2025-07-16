@@ -30,7 +30,6 @@ namespace back_end.Modules.reservas.Services
 
                 if (tipoExistente != null)
                 {
-                    _logger.LogInformation("Tipo de evento existente encontrado: {Nombre} con ID: {Id}", nombre, tipoExistente.Id);
                     return tipoExistente.Id;
                 }
 
@@ -45,7 +44,7 @@ namespace back_end.Modules.reservas.Services
                 _context.TiposEventos.Add(nuevoTipo);
                 await _context.SaveChangesAsync();
 
-                _logger.LogInformation("Nuevo tipo de evento creado: {Nombre} con ID: {Id}", nombre, nuevoTipo.Id);
+                _logger.LogInformation("Nuevo tipo de evento creado: {Nombre}", nombre);
                 return nuevoTipo.Id;
             }
             catch (Exception ex)
@@ -56,3 +55,4 @@ namespace back_end.Modules.reservas.Services
         }
     }
 }
+

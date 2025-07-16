@@ -18,7 +18,7 @@ public partial class DetalleServicio
 
     public string? PrecioActual { get; set; }
 
-    public virtual Item? Inventario { get; set; }
+    public virtual back_end.Modules.Item.Models.Item? Inventario { get; set; }
 
     public virtual Servicio? Servicio { get; set; }
 }

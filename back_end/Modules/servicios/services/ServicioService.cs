@@ -42,7 +42,9 @@ namespace back_end.Modules.servicios.Services
             _itemRepository = itemRepository;
             _itemService = itemService;
             _logger = logger;
-        }        public async Task<List<ServicioResponseDTO>> GetAllAsync()
+        }
+        
+        public async Task<List<ServicioResponseDTO>> GetAllAsync()
         {
             try
             {
@@ -237,19 +239,13 @@ namespace back_end.Modules.servicios.Services
                 var servicio = await _repository.GetByIdAsync(servicioId);
                 if (servicio == null) return null;
 
-                var item = await _itemRepository.GetByIdAsync(dto.InventarioId!);
-                if (item == null) return null;
-
-                // Recalcular StockDisponible actualizado
-                await _itemService.RecalcularStockDisponibleAsync(dto.InventarioId!);
-                item = await _itemRepository.GetByIdAsync(dto.InventarioId!);
-
-                // Validar que la cantidad no exceda el stock disponible
-                if (dto.Cantidad > item!.StockDisponible)
+                // Validar stock usando el repositorio optimizado
+                var stockValido = await _repository.ValidarStockParaDetalleAsync(dto.InventarioId!, dto.Cantidad);
+                if (!stockValido.esValido)
                 {
-                    _logger.LogWarning("La cantidad solicitada {Cantidad} excede el stock disponible {StockDisponible} del item {ItemId}", 
-                        dto.Cantidad, item.StockDisponible, item.Id);
-                    throw new InvalidOperationException($"La cantidad solicitada ({dto.Cantidad}) excede el stock disponible ({item.StockDisponible})");
+                    _logger.LogWarning("La cantidad solicitada {Cantidad} excede el stock disponible para el item {ItemId}: {Mensaje}", 
+                        dto.Cantidad, dto.InventarioId, stockValido.mensaje);
+                    throw new InvalidOperationException(stockValido.mensaje);
                 }
 
                 var detalle = new DetalleServicio
@@ -259,7 +255,7 @@ namespace back_end.Modules.servicios.Services
                     InventarioId = dto.InventarioId,
                     Cantidad = dto.Cantidad,
                     Estado = dto.Estado?.Length > 10 ? dto.Estado.Substring(0, 10) : dto.Estado,
-                    PrecioActual = dto.PrecioActual ?? item.Preciobase,
+                    PrecioActual = dto.PrecioActual ?? stockValido.item?.Preciobase, // Ya no necesita ToString()
                     Fecha = DateTime.Now
                 };
 
@@ -269,18 +265,17 @@ namespace back_end.Modules.servicios.Services
                 {
                     // Recalcular stock disponible después de agregar el detalle
                     await _itemService.RecalcularStockDisponibleAsync(creado.InventarioId!);
-                    var itemActualizado = await _itemRepository.GetByIdAsync(creado.InventarioId!);
 
                     return new DetalleServicioDTO
                     {
                         Id = creado.Id,
                         InventarioId = creado.InventarioId,
                         Cantidad = creado.Cantidad,
-                        NombreItem = creado.Inventario?.Nombre,
+                        NombreItem = stockValido.item?.Nombre,
                         Estado = creado.Estado,
                         Fecha = creado.Fecha,
                         PrecioActual = creado.PrecioActual,
-                        StockDisponible = itemActualizado?.StockDisponible ?? 0
+                        StockDisponible = (int)(stockValido.stockDisponibleActual - (dto.Cantidad ?? 0))
                     };
                 }
                 return null;
@@ -387,7 +382,9 @@ namespace back_end.Modules.servicios.Services
                 _logger.LogError(ex, "Error al eliminar múltiples detalles de servicio para servicio {ServicioId}", servicioId);
                 return false;
             }
-        }      // Métodos de compatibilidad para servicioItem
+        }
+        
+        // Métodos de compatibilidad para servicioItem
         public async Task<ServicioItemDTO?> AddServicioItemAsync(string servicioId, ServicioItemCreateDTO dto)
         {
             // Convertimos el DTO de entrada
@@ -498,3 +495,10 @@ namespace back_end.Modules.servicios.Services
         }
     }
 }
+
+
+
+
+
+
+

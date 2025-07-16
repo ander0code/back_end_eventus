@@ -1,6 +1,7 @@
 using back_end.Modules.Item.DTOs;
 using back_end.Modules.Item.Repositories;
 using back_end.Core.Utils;
+
 namespace back_end.Modules.Item.Services
 {
     public interface IItemService
@@ -14,6 +15,7 @@ namespace back_end.Modules.Item.Services
         Task<bool> UpdateStockAsync(string id, int newStock);
         Task<List<ItemListResponseDTO>> GetAllWithAvailabilityAsync();
         Task<bool> RecalcularStockDisponibleAsync(string id);
+        Task<bool> RecalcularStockDisponibleBatchAsync(List<string> itemsIds);
     }
 
     public class ItemService : IItemService
@@ -61,14 +63,15 @@ namespace back_end.Modules.Item.Services
         {
             try
             {
+                // Mantener el precio como string
                 var item = new Models.Item
                 {
                     Id = IdGenerator.GenerateId("Item"),
                     Nombre = dto.Nombre,
                     Descripcion = dto.Descripcion,
                     Stock = dto.Stock,
-                    StockDisponible = 0, // Inicializamos StockDisponible en 0
-                    Preciobase = dto.Preciobase
+                    StockDisponible = dto.Stock ?? 0,
+                    Preciobase = dto.Preciobase // Asignar directamente el string
                 };
 
                 var created = await _repository.CreateAsync(item);
@@ -76,7 +79,7 @@ namespace back_end.Modules.Item.Services
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al crear item {Nombre}", dto.Nombre);
+                _logger.LogError(ex, "Error al crear item {Nombre}: {Message}", dto.Nombre, ex.Message);
                 return null;
             }
         }
@@ -92,14 +95,19 @@ namespace back_end.Modules.Item.Services
                 existingItem.Nombre = dto.Nombre ?? existingItem.Nombre;
                 existingItem.Descripcion = dto.Descripcion ?? existingItem.Descripcion;
                 existingItem.Stock = dto.Stock ?? existingItem.Stock;
-                existingItem.Preciobase = dto.Preciobase ?? existingItem.Preciobase;
+                
+                // Actualizar el precio directamente como string
+                if (dto.Preciobase != null)
+                {
+                    existingItem.Preciobase = dto.Preciobase;
+                }
 
                 var updated = await _repository.UpdateAsync(existingItem);
                 return updated != null ? MapToDTO(updated) : null;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al actualizar item con ID {Id}", id);
+                _logger.LogError(ex, "Error al actualizar item con ID {Id}: {Message}", id, ex.Message);
                 return null;
             }
         }
@@ -154,35 +162,57 @@ namespace back_end.Modules.Item.Services
             }
         }
 
-        /// Recalcular stock disponible basado en uso actual
+        /// Recalcular stock disponible basado en uso actual (para un solo item)
         public async Task<bool> RecalcularStockDisponibleAsync(string id)
         {
             try
             {
-                // Obtener el item con todas sus relaciones actualizadas
-                var item = await _repository.GetByIdAsync(id);
-                if (item == null) return false;
+                return await RecalcularStockDisponibleBatchAsync(new List<string> { id });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al recalcular stock disponible para item con ID {Id}", id);
+                return false;
+            }
+        }
 
-                // Calcular cantidad en uso considerando múltiples reservas del mismo servicio
-                var cantidadEnUso = await CalcularCantidadEnUsoRealAsync(item);
-                var stockActual = item.Stock ?? 0;
-                var nuevoStockDisponible = (int)(stockActual - cantidadEnUso);
+        /// Recalcular stock disponible para múltiples items a la vez (más eficiente)
+        public async Task<bool> RecalcularStockDisponibleBatchAsync(List<string> itemsIds)
+        {
+            try
+            {
+                // Procesar todos los items en una sola consulta optimizada
+                var itemsConStock = await _repository.GetItemsConStockEnUsoAsync(itemsIds);
+                var itemsActualizados = new List<Models.Item>();
 
-                // Solo actualizar si el valor cambió
-                if (item.StockDisponible != nuevoStockDisponible)
+                foreach (var itemInfo in itemsConStock)
                 {
-                    item.StockDisponible = nuevoStockDisponible;
-                    await _repository.UpdateAsync(item);
+                    var stockActual = itemInfo.Stock ?? 0;
+                    var cantidadEnUso = itemInfo.CantidadEnUso;
+                    var nuevoStockDisponible = (int)(stockActual - cantidadEnUso);
+
+                    // Solo actualizar si el valor cambió
+                    if (itemInfo.StockDisponible != nuevoStockDisponible)
+                    {
+                        itemInfo.StockDisponible = nuevoStockDisponible;
+                        itemsActualizados.Add(itemInfo);
+                    }
+                }
+
+                if (itemsActualizados.Any())
+                {
+                    await _repository.UpdateBatchAsync(itemsActualizados);
                     
-                    _logger.LogInformation("Stock recalculado para item {ItemNombre}: Total: {StockTotal}, En uso REAL: {EnUso}, Disponible: {Disponible}", 
-                        item.Nombre, stockActual, cantidadEnUso, nuevoStockDisponible);
+                    // Usar log mínimo solo si hay más de un ítem
+                    if (itemsActualizados.Count > 1)
+                        _logger.LogDebug("Stock recalculado en lote para {Count} items", itemsActualizados.Count);
                 }
 
                 return true;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al recalcular stock disponible para item con ID {Id}", id);
+                _logger.LogError(ex, "Error al recalcular stock disponible en lote");
                 return false;
             }
         }
@@ -195,8 +225,8 @@ namespace back_end.Modules.Item.Services
 
             // Agrupar por servicio y calcular cuántas veces se usa cada servicio
             var serviciosUsados = item.DetalleServicios
-                .Where(ds => !string.IsNullOrEmpty(ds.ServicioId)) // Cambia HasValue por !string.IsNullOrEmpty
-                .GroupBy(ds => ds.ServicioId!) // Agrupa por el string ServicioId
+                .Where(ds => !string.IsNullOrEmpty(ds.ServicioId)) 
+                .GroupBy(ds => ds.ServicioId!) 
                 .ToList();
 
             double cantidadTotalEnUso = 0;
@@ -213,9 +243,6 @@ namespace back_end.Modules.Item.Services
                 var cantidadRealPorServicio = cantidadPorServicio * reservasUsandoServicio;
                 
                 cantidadTotalEnUso += cantidadRealPorServicio;
-
-                _logger.LogInformation("Servicio {ServicioId}: Cantidad base: {CantidadBase}, Reservas activas usando: {Reservas}, Total en uso: {TotalUso}", 
-                    servicioId, cantidadPorServicio, reservasUsandoServicio, cantidadRealPorServicio);
             }
 
             return cantidadTotalEnUso;
@@ -250,7 +277,8 @@ namespace back_end.Modules.Item.Services
                         Descripcion = item.Descripcion,
                         Stock = item.Stock,
                         StockDisponible = stockDisponible,
-                        Preciobase = item.Preciobase
+                        Preciobase = item.Preciobase,
+                        ItemsEnUso = (int)cantidadEnUso 
                     });
                 }
 
@@ -265,14 +293,22 @@ namespace back_end.Modules.Item.Services
 
         private ItemResponseDTO MapToDTO(Models.Item item)
         {
+            // Calcular la cantidad en uso directamente
+            int enUso = 0;
+            if (item.DetalleServicios != null && item.DetalleServicios.Any())
+            {
+                enUso = (int)(item.Stock ?? 0) - item.StockDisponible;
+            }
+            
             return new ItemResponseDTO
             {
                 Id = item.Id,
                 Nombre = item.Nombre,
                 Descripcion = item.Descripcion,
                 Stock = item.Stock,
-                StockDisponible = item.StockDisponible,  // Agregamos el StockDisponible
-                Preciobase = item.Preciobase
+                StockDisponible = item.StockDisponible,
+                Preciobase = item.Preciobase,
+                ItemsEnUso = enUso >= 0 ? enUso : 0
             };
         }
     }

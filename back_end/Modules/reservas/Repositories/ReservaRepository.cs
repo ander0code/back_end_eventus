@@ -2,6 +2,7 @@ using back_end.Core.Data;
 using back_end.Modules.reservas.Models;
 using Microsoft.EntityFrameworkCore;
 using back_end.Core.Utils;
+using Microsoft.Extensions.Logging;
 
 namespace back_end.Modules.reservas.Repositories
 {    
@@ -18,22 +19,31 @@ namespace back_end.Modules.reservas.Repositories
     public class ReservaRepository : IReservaRepository
     {
         private readonly DbEventusContext _context;
+        private readonly ILogger<ReservaRepository> _logger;
 
-        public ReservaRepository(DbEventusContext context)
+        public ReservaRepository(DbEventusContext context, ILogger<ReservaRepository> logger)
         {
             _context = context;
+            _logger = logger;
         }
 
         public async Task<List<Reserva>> GetAllAsync()
         {
-            return await _context.Reservas
-                .Include(r => r.Cliente)
-                .ThenInclude(c => c!.Usuario) 
-                .Include(r => r.Servicio)
-                .Include(r => r.TiposEventoNavigation)
-                .Include(r => r.Pagos)
-                .AsSplitQuery() 
-                .ToListAsync();
+            try
+            {
+                return await _context.Reservas
+                    .Include(r => r.Cliente)
+                        .ThenInclude(c => c!.Usuario)
+                    .Include(r => r.Servicio) // No incluir subpropiedades que no existan
+                    .Include(r => r.TiposEventoNavigation)
+                    .OrderByDescending(r => r.FechaRegistro)
+                    .ToListAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al obtener todas las reservas");
+                throw;
+            }
         }
 
         public async Task<List<Reserva>> GetByClienteIdAsync(string clienteId)
