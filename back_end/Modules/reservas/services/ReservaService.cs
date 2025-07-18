@@ -319,18 +319,21 @@ namespace back_end.Modules.reservas.Services
                 var estadosLiberadores = new[] { "Finalizado", "Cancelada", "Cancelado" };
                 var estadosQueUsan = new[] { "Pendiente", "Confirmado" };
                 
-                if (!string.IsNullOrEmpty(estadoAnterior) && 
-                    estadosLiberadores.Contains(estadoAnterior, StringComparer.OrdinalIgnoreCase) &&
-                    estadosQueUsan.Contains(dto.Estado, StringComparer.OrdinalIgnoreCase))
+                if (estadosQueUsan.Contains(dto.Estado, StringComparer.OrdinalIgnoreCase))
                 {
+                    // Verificar si viene de un estado liberador o es un cambio entre estados que usan stock
                     var servicioAValidar = !string.IsNullOrEmpty(dto.ServicioId) ? dto.ServicioId : servicioIdAnterior;
                     
                     if (!string.IsNullOrEmpty(servicioAValidar))
                     {
+                        _logger.LogInformation("Validando stock para cambio de estado a {Estado} en reserva {ReservaId} con servicio {ServicioId}", 
+                            dto.Estado, id, servicioAValidar);
+                            
                         var stockValido = await ValidarStockServicioAsync(servicioAValidar);
                         if (!stockValido.esValido)
                         {
-                            throw new InvalidOperationException($"No se puede cambiar el estado porque {stockValido.mensaje}");
+                            _logger.LogWarning("Cambio de estado rechazado por stock insuficiente: {Mensaje}", stockValido.mensaje);
+                            throw new InvalidOperationException($"No se puede cambiar el estado a {dto.Estado} porque {stockValido.mensaje}");
                         }
                     }
                 }
@@ -389,18 +392,21 @@ namespace back_end.Modules.reservas.Services
                 var estadosLiberadores = new[] { "Finalizado", "Cancelada", "Cancelado" };
                 var estadosQueUsan = new[] { "Pendiente", "Confirmado" };
                 
-                if (!string.IsNullOrEmpty(estadoAnterior) && 
-                    estadosLiberadores.Contains(estadoAnterior, StringComparer.OrdinalIgnoreCase) &&
-                    estadosQueUsan.Contains(dto.Estado, StringComparer.OrdinalIgnoreCase))
+                if (estadosQueUsan.Contains(dto.Estado, StringComparer.OrdinalIgnoreCase))
                 {
+                    // Verificar si viene de un estado liberador o es un cambio entre estados que usan stock
                     var servicioAValidar = !string.IsNullOrEmpty(dto.ServicioId) ? dto.ServicioId : servicioIdAnterior;
                     
                     if (!string.IsNullOrEmpty(servicioAValidar))
                     {
+                        _logger.LogInformation("Validando stock para cambio de estado a {Estado} en reserva {ReservaId} con servicio {ServicioId}", 
+                            dto.Estado, id, servicioAValidar);
+                            
                         var stockValido = await ValidarStockServicioAsync(servicioAValidar);
                         if (!stockValido.esValido)
                         {
-                            throw new InvalidOperationException($"No se puede cambiar el estado porque {stockValido.mensaje}");
+                            _logger.LogWarning("Cambio de estado rechazado por stock insuficiente: {Mensaje}", stockValido.mensaje);
+                            throw new InvalidOperationException($"No se puede cambiar el estado a {dto.Estado} porque {stockValido.mensaje}");
                         }
                     }
                 }
@@ -465,4 +471,3 @@ namespace back_end.Modules.reservas.Services
         }
     }
 }
-            
