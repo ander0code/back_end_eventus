@@ -33,6 +33,7 @@ namespace back_end.Modules.pagos.Repositories
             return await _context.Pagos
                 .Include(p => p.IdReservaNavigation)
                 .Include(p => p.IdTipoPagoNavigation)
+                .OrderByDescending(p => p.Id) // agregado
                 .ToListAsync();
         }
 

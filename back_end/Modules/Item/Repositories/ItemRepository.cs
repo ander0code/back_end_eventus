@@ -40,6 +40,7 @@ namespace back_end.Modules.Item.Repositories
                 return await _context.Items
                     .Include(i => i.DetalleServicios)
                         .ThenInclude(ds => ds.Servicio)
+                    .OrderByDescending(i => i.Id) // agregado
                     .ToListAsync();
             }
             catch (Exception ex)

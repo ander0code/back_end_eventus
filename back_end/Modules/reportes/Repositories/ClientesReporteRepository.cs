@@ -152,7 +152,6 @@ public class ClientesReporteRepository : IClientesReporteRepository
             })
             .OrderByDescending(x => x.TotalReservas)
             .ToList();
-
         return resultado;
     }
 }

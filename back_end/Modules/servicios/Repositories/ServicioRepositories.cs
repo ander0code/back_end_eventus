@@ -40,6 +40,7 @@ namespace back_end.Modules.servicios.Repositories
             return await _context.Servicios
                 .Include(s => s.DetalleServicios)
                     .ThenInclude(ds => ds.Inventario)
+                .OrderByDescending(s => s.Id) // agregado
                 .ToListAsync();
         }
         
