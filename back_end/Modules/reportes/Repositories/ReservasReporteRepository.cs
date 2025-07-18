@@ -94,6 +94,7 @@ public class ReservasReporteRepository : IReservasReporteRepository
     {
         var query = _context.Set<Reserva>()
             .Include(r => r.Cliente)
+            .ThenInclude(c => c!.Usuario)
             .Include(r => r.Pagos)
             .Where(r => r.PrecioTotal.HasValue && r.PrecioTotal > 0 && r.Pagos.Any() && r.FechaEjecucion.HasValue)
             .AsQueryable();
@@ -116,7 +117,7 @@ public class ReservasReporteRepository : IReservasReporteRepository
             {
                 ReservaId = x.Reserva.Id,
                 NombreEvento = x.Reserva.NombreEvento,
-                ClienteRazonSocial = x.Reserva.Cliente?.RazonSocial,
+                ClienteRazonSocial = x.Reserva.Cliente?.Usuario?.Nombre,
                 PrecioTotal = x.Reserva.PrecioTotal!.Value,
                 MontoAdelanto = x.MontoAdelanto,
                 PorcentajeAdelanto = Math.Round(x.PorcentajeAdelanto, 2)
